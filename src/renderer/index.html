@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <title>snip</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <!--
+      Every screen of the app is a <section data-view="...">.
+      app.js shows one at a time.
+    -->
+    <main id="app">
+      <!-- start: pick a file -->
+      <section data-view="start" class="start">
+        <div class="hero">
+          <div class="hero-inner">
+            <h1>Cut and compress videos</h1>
+            <p class="lede">Trim, crop and shrink a video until it fits Discord, WhatsApp or an email.</p>
+            <div class="pick">
+              <button type="button" id="open-button" class="btn primary">Select video</button>
+              <span class="pick-hint">or drop a video anywhere</span>
+            </div>
+            <p class="privacy">Your video stays on this computer. snip runs ffmpeg locally and sends nothing to the internet.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- broken: the file can't be read -->
+      <section data-view="broken" class="page" hidden>
+        <h1>This video can't be read</h1>
+        <p id="broken-message" class="notice"></p>
+        <p><button type="button" class="btn ghost" data-action="change">Select a different file</button></p>
+      </section>
+
+      <!-- preparing: a playable copy of a format the preview can't show -->
+      <section data-view="preparing" class="page" hidden>
+        <h1 id="preparing-title"></h1>
+        <div class="bar"><div id="preparing-bar" class="fill" style="width: 0%"></div></div>
+        <p id="preparing-percent" class="percent mono"></p>
+        <p class="stats">The preview can't show this format, so snip makes a smaller copy to edit with. Converting still uses the original.</p>
+        <button type="button" class="btn ghost" data-action="change">Cancel</button>
+      </section>
+
+      <!-- convert: timeline, crop and quality -->
+      <section data-view="convert" class="convert" hidden>
+        <div class="bench">
+          <div class="stage-box">
+            <div id="stage" class="stage">
+              <video id="preview" playsinline preload="auto"></video>
+              <img id="preview-fallback" class="frame" alt="" hidden />
+              <div id="preview-empty" class="empty" hidden>No preview for this format</div>
+              <div id="crop" class="crop">
+                <span class="corner tl" data-corner="tl"></span>
+                <span class="corner tr" data-corner="tr"></span>
+                <span class="corner br" data-corner="br"></span>
+                <span class="corner bl" data-corner="bl"></span>
+              </div>
+              <div class="aspects" role="group" aria-label="Crop shape">
+                <button type="button" data-aspect="0">Full frame</button>
+                <button type="button" data-aspect="1.7778">16:9</button>
+                <button type="button" data-aspect="1.3333">4:3</button>
+                <button type="button" data-aspect="0.75">3:4</button>
+                <button type="button" data-aspect="0.5625">9:16</button>
+              </div>
+              <span id="stamp" class="stamp mono"></span>
+            </div>
+          </div>
+
+          <div class="deck">
+            <button type="button" id="play" class="play"></button>
+            <div id="film" class="film">
+              <div id="strip" class="strip"></div>
+              <div id="cuts"></div>
+              <div id="cursor" class="cursor"></div>
+            </div>
+          </div>
+          <div id="ticks" class="ticks mono"></div>
+
+          <p class="hint">Drag the ends to trim, or drag on the dimmed film to select a new part. Space plays and pauses.</p>
+          <div id="parts" class="parts"></div>
+        </div>
+
+        <form id="settings" class="panel">
+          <h1 id="convert-title"></h1>
+
+          <div class="field">
+            <label for="video-select">Quality</label>
+            <select id="video-select"></select>
+            <p id="video-detail" class="detail"></p>
+          </div>
+
+          <div class="field" id="audio-field">
+            <label for="audio-select">Audio</label>
+            <select id="audio-select"></select>
+            <p id="audio-detail" class="detail"></p>
+          </div>
+
+          <div class="btn-row">
+            <button type="submit" id="convert-button" class="btn primary">Convert</button>
+            <button type="button" class="btn ghost" data-action="change">Select a different file</button>
+          </div>
+          <p id="plan-error" class="detail bad"></p>
+
+          <details>
+            <summary>What happens to my video?</summary>
+            <p>How each property of the video changes:</p>
+            <table id="details-table"></table>
+            <p>snip runs these ffmpeg commands:</p>
+            <div id="commands"></div>
+            <p>They update as you change the selection and settings.</p>
+          </details>
+        </form>
+      </section>
+
+      <!-- converting: progress -->
+      <section data-view="converting" class="page" hidden>
+        <h1 id="progress-title"></h1>
+        <div class="bar"><div id="progress-bar" class="fill" style="width: 0%"></div></div>
+        <p id="progress-percent" class="percent mono"></p>
+        <p id="progress-stats" class="stats mono"></p>
+        <button type="button" id="cancel-button" class="btn ghost">Cancel</button>
+      </section>
+
+      <!-- failed: the conversion broke -->
+      <section data-view="failed" class="page" hidden>
+        <h1 id="failed-title"></h1>
+        <p id="failed-message" class="notice"></p>
+        <div class="btn-row">
+          <button type="button" class="btn primary" data-action="retry">Try different settings</button>
+          <button type="button" id="copy-report" class="btn ghost">Copy error report</button>
+        </div>
+      </section>
+
+      <!-- done: preview and save -->
+      <section data-view="done" class="done" hidden>
+        <div id="result" class="result"></div>
+        <div class="result-bar">
+          <h1 id="done-title"></h1>
+          <div class="btn-row">
+            <button type="button" id="save-button" class="btn primary"></button>
+            <button type="button" class="btn ghost" data-action="change">Select a different file</button>
+            <button type="button" class="btn ghost" data-action="retry">Try different settings</button>
+          </div>
+          <p id="saved" class="saved mono" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <div id="drop" class="drop" hidden><span>Drop video here</span></div>
+  </body>
+</html>

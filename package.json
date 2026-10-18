@@ -1,0 +1,21 @@
+{
+  "name": "snip",
+  "productName": "snip",
+  "version": "0.0.0",
+  "description": "Cut, crop and shrink videos",
+  "author": "MHD",
+  "homepage": "https://github.com/mhdcodes/snip",
+  "desktopName": "snip.desktop",
+  "type": "module",
+  "main": "src/main/main.js",
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "test": "node --test",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.17.0"
+  }
+}

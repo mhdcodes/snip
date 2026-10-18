@@ -1,0 +1,60 @@
+# How npm run dist and the release workflow package snip.
+# Reference: https://www.electron.build/configuration
+
+appId: io.github.mhdcodes.snip
+
+# The newer AppImage toolset, still marked beta. Its runtime needs no libfuse2, and its
+# launcher turns Chromium's sandbox off where the system blocks it, as Ubuntu 24.04 does;
+# the default toolset's AppImage crashes on start there.
+toolsets:
+  appimage: "1.0.3"
+
+files:
+  - src/**/*
+
+# The release workflow puts ffmpeg here, see .github/workflows/release.yml.
+# Without it snip uses the ffmpeg on PATH.
+extraResources:
+  - from: ffmpeg
+    to: ffmpeg
+
+# Turn off ways to run the shipped binary as something other than snip.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: AudioVideo
+  executableName: snip
+  artifactName: snip-linux-${arch}.${ext}
+  syncDesktopName: true
+  maintainer: MHD
+
+deb:
+  # electron-builder's default list, plus ALSA and libgbm, which Chromium needs and the
+  # default misses. libasound2 alone is a virtual package on Ubuntu 24.04, where apt may
+  # pick an incompatible stand-in, so the real package comes first.
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+    - libasound2t64 | libasound2
+    - libgbm1
+
+win:
+  target: nsis
+
+nsis:
+  artifactName: snip-windows-${arch}-setup.${ext}

@@ -1,0 +1,11 @@
+node_modules/
+
+# the old Go build
+/snip
+
+# electron-builder output, and the ffmpeg the release workflow bundles
+dist/
+ffmpeg/
+
+# Env
+.env

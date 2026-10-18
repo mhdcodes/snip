@@ -1,0 +1,883 @@
+/* Flat blocks on near-black with hairline borders. White is the
+   accent: it is the primary action, the crop corners, the cut marks,
+   the handles and the progress. Red appears only when ffmpeg fails or
+   a plan can't be built. Everything else is one grey scale.
+
+   snip has one, dark, theme. The video well (stage, film, results)
+   is pure black. */
+
+:root {
+  --bg: #0a0a0a;
+  --block: #111111;
+  --raised: #181818;
+  --ink: #ededed;
+  --muted: #8f8f8f;
+  --line: #2e2e2e;
+  --line-strong: #444444;
+  --bad: #ff6259;
+
+  --well: #000000;
+
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace;
+
+  --radius: 8px;
+  --btn-h: 48px;
+  --pick-h: 56px;
+  --film-h: 72px;
+  --key-w: 64px;
+  --key-h: 72px;
+  --deck-gap: 12px;
+  --tick-inset: calc(var(--key-w) + var(--deck-gap));
+  --bench-pad: 2.75rem;
+  --field-gap: 1.75rem;
+  --page-w: 44rem;
+  --panel-w: 440px;
+  --stage-max: 680px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* the hidden attribute must win over display rules like .convert { display: grid } */
+[hidden] {
+  display: none !important;
+}
+
+/* everything rem-based scales from here */
+html {
+  font-size: 17px;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* the window is a fixed frame: the page never scrolls, each screen fills it
+   and scrolls inside its own regions, so nothing jumps between screens */
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--sans);
+}
+
+main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+main > section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: var(--btn-h);
+  padding: 0.5em 1.2em;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.btn.primary:hover:not([disabled]) {
+  background: var(--muted);
+  border-color: var(--muted);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.btn.ghost:hover:not([disabled]) {
+  background: var(--raised);
+  border-color: var(--ink);
+}
+
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn[disabled]:active {
+  transform: none;
+}
+
+/* "Copied": same ghost button, confirmed state */
+.btn.ghost.copied {
+  border-color: var(--ink);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+h1 {
+  margin: 0 0 1.35rem;
+  font-size: clamp(1.4rem, 1.2rem + 0.7vw, 1.7rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* start page: the hero sits centered in the window */
+.start {
+  display: grid;
+  align-content: safe center;
+}
+
+.hero {
+  padding: clamp(2rem, 6vw, 4rem) 16px;
+}
+
+.hero-inner {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.hero h1 {
+  font-size: clamp(2.6rem, 1.5rem + 5.5vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.4em;
+  font-weight: 750;
+}
+
+.lede {
+  font-size: 1.2rem;
+  color: var(--muted);
+  max-width: 33rem;
+  margin: 0 0 2rem;
+}
+
+.pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 1.2rem;
+}
+
+.pick .primary {
+  font-size: 1.08rem;
+  min-height: var(--pick-h);
+  padding-inline: 1.5em;
+}
+
+.pick-hint {
+  color: var(--muted);
+  font: 0.85rem var(--mono);
+}
+
+.privacy {
+  margin: 2rem 0 0;
+  max-width: 33rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+
+/* convert page */
+.convert {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* side by side, each column fills the window height and scrolls on its own */
+@media (min-width: 1000px) {
+  .convert {
+    grid-template-columns: minmax(0, 1fr) var(--panel-w);
+    overflow: hidden;
+  }
+}
+
+.bench {
+  padding: var(--bench-pad);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 560px) {
+  .bench {
+    padding: 16px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .bench {
+    border-right: 1px solid var(--line);
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* the space the video gets: whatever the timeline and parts leave over.
+   editor.js sizes the stage to fit it in both directions. */
+.stage-box {
+  flex: 1;
+  min-height: 160px;
+  height: 56vh; /* stacked columns: no window height to share */
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+@media (min-width: 1000px) {
+  .stage-box {
+    height: auto;
+  }
+}
+
+/* the stage: the video well. editor.js sets its aspect ratio and width. */
+.stage {
+  position: relative;
+  width: 100cqw;
+  max-width: var(--stage-max);
+  max-height: 100cqh;
+  aspect-ratio: 16 / 9;
+  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  touch-action: none; /* the crop box is dragged on touch, too */
+  user-select: none;
+}
+
+.stage video,
+.stage img.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+}
+
+.stage .empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font: 0.85rem var(--mono);
+}
+
+.crop {
+  position: absolute;
+  z-index: 1; /* own layer, so the shade also paints over the video */
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.72);
+  outline: 1px dashed rgb(255 255 255 / 0.6);
+  cursor: move;
+}
+
+/* full-frame crop: nothing is dimmed, edges just hint on hover */
+.crop.full {
+  box-shadow: none;
+  outline-color: transparent;
+}
+
+.stage:hover .crop.full,
+.stage:focus-within .crop.full {
+  outline-color: rgb(255 255 255 / 0.3);
+}
+
+.corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 0 solid var(--ink);
+  opacity: 0.75;
+}
+
+.corner.tl { left: -2px; top: -2px; border-width: 3px 0 0 3px; cursor: nwse-resize; }
+.corner.tr { right: -2px; top: -2px; border-width: 3px 3px 0 0; cursor: nesw-resize; }
+.corner.br { right: -2px; bottom: -2px; border-width: 0 3px 3px 0; cursor: nwse-resize; }
+.corner.bl { left: -2px; bottom: -2px; border-width: 0 0 3px 3px; cursor: nesw-resize; }
+
+.crop.full .corner {
+  opacity: 0.3;
+}
+
+.stage:hover .crop.full .corner,
+.stage:focus-within .crop.full .corner {
+  opacity: 0.75;
+}
+
+.aspects {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  z-index: 2;
+}
+
+.aspects button {
+  font: 600 0.72rem var(--mono);
+  padding: 0.25em 0.6em;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  cursor: pointer;
+}
+
+.aspects button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.stamp {
+  position: absolute;
+  bottom: 0;
+  padding: 0.15em 0.55em;
+  background: rgb(0 0 0 / 0.75);
+  color: #fff;
+  font: 600 0.78rem var(--mono);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* the deck: play key + film */
+.deck {
+  flex: none;
+  display: flex;
+  gap: var(--deck-gap);
+  margin-top: calc(var(--deck-gap) + 8px);
+  width: 100%;
+  max-width: var(--stage-max);
+  margin-inline: auto;
+}
+
+.play {
+  flex: none;
+  width: var(--key-w);
+  height: var(--key-h);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--block);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.play:hover {
+  background: var(--raised);
+  border-color: var(--ink);
+}
+
+.play svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.film {
+  position: relative;
+  flex: 1;
+  height: var(--film-h);
+  min-width: 0;
+  border-radius: var(--radius);
+  background-color: var(--well);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  touch-action: none; /* the timeline is dragged on touch, too */
+  user-select: none;
+}
+
+/* the stripes show until the thumbnails arrive */
+.strip {
+  position: absolute;
+  inset: 1px;
+  display: flex;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, #242424 0 52px, #191919 52px 104px);
+}
+
+.strip img {
+  height: 100%;
+  object-fit: cover;
+  flex: none;
+  border-right: 1px solid var(--well);
+  animation: develop 0.4s ease both;
+}
+
+@keyframes develop {
+  from { opacity: 0; }
+}
+
+/* unselected film is hatched and dimmed */
+.gap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(135deg, rgb(0 0 0 / 0.6) 0 5px, rgb(0 0 0 / 0.75) 5px 10px);
+  backdrop-filter: grayscale(1);
+  -webkit-backdrop-filter: grayscale(1);
+  cursor: crosshair; /* drag here to add a part */
+  z-index: 1;
+}
+
+.cut {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--ink);
+  background: rgb(255 255 255 / 0.05);
+  cursor: grab; /* drag a part to move it */
+  z-index: 2;
+}
+
+.cut:active {
+  cursor: grabbing;
+}
+
+.handle {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 18px;
+  margin-left: -9px;
+  display: grid;
+  place-items: center;
+  cursor: col-resize; /* drag an edge to trim a part */
+  z-index: 4;
+  outline-offset: 0;
+}
+
+.handle::before {
+  content: "";
+  width: 6px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ink);
+  opacity: 0.85;
+}
+
+.handle:hover::before,
+.handle:focus-visible::before {
+  opacity: 1;
+}
+
+.cursor {
+  position: absolute;
+  top: -7px;
+  bottom: -7px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* editor.js places each label past the play key, see --tick-inset */
+.ticks {
+  position: relative;
+  height: 20px;
+  flex: none;
+  margin: 6px auto 0;
+  width: 100%;
+  max-width: var(--stage-max);
+  font: 600 0.68rem var(--mono);
+  color: var(--muted);
+}
+
+.ticks::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 var(--tick-inset);
+  background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10%);
+}
+
+.ticks span {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.hint {
+  font: 0.8rem var(--mono);
+  color: var(--muted);
+  margin: 1.4rem auto 0;
+  width: 100%;
+  max-width: var(--stage-max);
+}
+
+/* a fixed box, so adding a part never shrinks the video; more parts scroll */
+.parts {
+  flex: none;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  width: 100%;
+  max-width: var(--stage-max);
+  height: 11rem;
+  margin: 0.6rem auto 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.part {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--block);
+  font-size: 0.95rem;
+}
+
+.part .name {
+  font-weight: 600;
+  min-width: 4.5em;
+}
+
+.part label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font: 0.78rem var(--mono);
+  color: var(--muted);
+}
+
+input.timecode {
+  width: 9ch;
+  padding: 0.15em 0.35em;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--ink);
+  font: 0.95rem var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+input.timecode:focus-visible {
+  outline-offset: 0;
+  border-color: var(--ink);
+}
+
+/* settings panel */
+.panel {
+  padding: 2rem 16px 2.5rem;
+}
+
+@media (min-width: 1000px) {
+  .panel {
+    padding: var(--bench-pad) 1.6rem;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+}
+
+.field {
+  margin: 0 0 var(--field-gap);
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+select {
+  width: 100%;
+  min-height: var(--btn-h);
+  padding: 0.45em 0.7em;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--block);
+  color: var(--ink);
+  font: inherit;
+}
+
+.detail {
+  margin: 0.4rem 0 0;
+  font: 0.8rem var(--mono);
+  color: var(--muted);
+}
+
+.detail.bad {
+  color: var(--bad);
+}
+
+/* room for two lines, so text changing under the selects moves nothing */
+.field .detail,
+#plan-error {
+  min-height: 2.6em;
+}
+
+details {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1.1rem;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+details p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+details table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 0.75rem 0;
+  color: var(--ink);
+}
+
+details th,
+details td {
+  text-align: left;
+  padding: 0.35em 0.5em;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+
+details thead th {
+  font: 600 0.68rem var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* a changed value is bold ink, the loudest this theme gets */
+details td.changed {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+details tr.group th {
+  padding-top: 1.1em;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* the ffmpeg commands: quiet mono blocks */
+pre {
+  margin: 0.5rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--block);
+  color: var(--ink);
+  font: 0.78rem/1.6 var(--mono);
+  overflow-x: auto;
+}
+
+pre .esc {
+  color: var(--muted);
+}
+
+/* simple centered pages: preparing, converting, failed, broken */
+/* centered in the window like the start page; the auto margins keep
+   the top reachable when the content is taller than the window */
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--page-w);
+  margin: 0 auto;
+  padding: 3rem 16px;
+}
+
+.page > :first-child {
+  margin-top: auto;
+}
+
+.page > :last-child {
+  margin-bottom: auto;
+}
+
+.page > .btn {
+  align-self: flex-start;
+}
+
+.page .btn-row {
+  margin-top: 1.4rem;
+}
+
+.page h1 {
+  margin-bottom: 1.4rem;
+}
+
+/* ffmpeg's own words: mono block with a red edge */
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--bad);
+  border-radius: var(--radius);
+  background: var(--block);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--raised);
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+}
+
+.bar .fill {
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.25s ease;
+}
+
+.percent {
+  margin: 1.2rem 0 0.2rem;
+  min-height: 1.2em;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.stats {
+  min-height: 2.6em;
+  margin: 0 0 1.2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/* result page */
+/* the result fills the window above its buttons */
+.done {
+  display: flex;
+  flex-direction: column;
+}
+
+.result {
+  position: relative;
+  flex: 1;
+  min-height: 160px;
+  background: var(--well);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.25rem;
+}
+
+.result video,
+.result img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.result-bar {
+  flex: none;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0 16px 1rem;
+}
+
+.result-bar h1 {
+  margin-top: 1rem;
+}
+
+.saved {
+  margin: 1rem 0 0;
+  min-height: 1.5em;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+/* app.js hides the line until a save; it keeps its room so the buttons stay put */
+.saved[hidden] {
+  display: block !important;
+  visibility: hidden;
+}
+
+/* shown while a file is dragged over the window */
+.drop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.9);
+  color: #ffffff;
+  font-size: 1.9rem;
+  font-weight: 700;
+  outline: 2px dashed #ffffff;
+  outline-offset: -24px;
+  pointer-events: none;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
