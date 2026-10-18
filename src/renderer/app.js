@@ -50,7 +50,7 @@ async function openVideo(pick) {
 
   settings = {
     modification: {
-      cuts: [{ start: 0, duration: Math.min(video.metadata.container.duration, 60) }],
+      cut: { start: 0, duration: Math.min(video.metadata.container.duration, 60) },
       crop: { top: 0, right: 0, bottom: 0, left: 0 },
     },
     video: remembered("video.preset") || "size_8mb",
@@ -168,7 +168,9 @@ function drawSettings(plan) {
   const audioSelect = $("audio-select");
   audioSelect.innerHTML = "";
   for (const format of plan.audioFormats) {
-    audioSelect.append(new Option(PRESET_NAMES[format.preset], format.preset, false, format.preset === chosenAudio.preset));
+    audioSelect.append(
+      new Option(PRESET_NAMES[format.preset], format.preset, false, format.preset === chosenAudio.preset),
+    );
   }
   setDetail($("audio-detail"), audioDetail(chosenAudio));
   $("audio-field").hidden = isGif; // gifs have no sound
@@ -201,7 +203,11 @@ function setDetail(element, [text, kind]) {
 function videoDetail(v) {
   const size = `${num(v.width)}×${num(v.height)}`;
   const bitrate = num(Math.round(v.bitrate || 0));
-  if (v.implausible) return [`Too long for this size: only ${bitrate} kbit/s would be left. Shorten the selection or pick a bigger size.`, "bad"];
+  if (v.implausible)
+    return [
+      `Too long for this size: only ${bitrate} kbit/s would be left. Shorten the selection or pick a bigger size.`,
+      "bad",
+    ];
   if (v.original) return [`Keeps the original ${size} stream at ~${bitrate} kbit/s`, "good"];
   if (v.preset.startsWith("crf")) return [`${size} at ${num(v.fps)} fps, CRF ${v.crf}`, ""];
   if (v.preset.startsWith("gif")) return [`${size} at ${num(v.fps)} fps`, ""];
@@ -237,7 +243,11 @@ function drawDetails(source, target) {
     ["Resolution", `${source.video.width}×${source.video.height}`, `${target.video.width}×${target.video.height}`],
     ["Frame rate", `${num(source.video.fps)} fps`, `${num(target.video.fps)} fps`],
     ["Color format", source.video.color, target.video.color],
-    ["Bitrate", kbit(source.video.bitrate), target.video.crf ? `< ${num(estimateBitrate(target.video), 0)} kbit/s` : kbit(target.video.bitrate)],
+    [
+      "Bitrate",
+      kbit(source.video.bitrate),
+      target.video.crf ? `< ${num(estimateBitrate(target.video), 0)} kbit/s` : kbit(target.video.bitrate),
+    ],
   ];
   if (source.audio.codec !== "none") {
     const none = target.audio.codec === "none";
@@ -274,16 +284,9 @@ function estimateBitrate(v) {
 function drawCommands(plan) {
   const box = $("commands");
   box.innerHTML = "";
-  const blocks = [];
-  if (plan.concat) {
-    blocks.push(`cat > concat.txt << 'EOF'\n${plan.concat}EOF`);
-  }
   for (const args of plan.commands) {
-    blocks.push(formatCommand(args));
-  }
-  for (const text of blocks) {
     const pre = document.createElement("pre");
-    pre.textContent = text;
+    pre.textContent = formatCommand(args);
     box.append(pre);
   }
 }
@@ -448,7 +451,9 @@ function esc(text) {
 function remember(key, value) {
   try {
     localStorage.setItem(key, value);
-  } catch {}
+  } catch {
+    // storage can be off; then the choice just isn't remembered
+  }
 }
 
 function remembered(key) {

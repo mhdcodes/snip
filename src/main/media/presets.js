@@ -36,7 +36,11 @@ function dedupe(list) {
 // videoFormats lists the video presets for a source, in display order.
 export function videoFormats(source) {
   const v = source.video;
-  const rough = dedupe([fitResolution(v, 1920, 1080, 60), fitResolution(v, 1280, 720, 30), fitResolution(v, 640, 480, 30)]);
+  const rough = dedupe([
+    fitResolution(v, 1920, 1080, 60),
+    fitResolution(v, 1280, 720, 30),
+    fitResolution(v, 640, 480, 30),
+  ]);
   const fine = dedupe([
     fitResolution(v, 1280, 720, 30),
     fitResolution(v, 854, 480, 30),
@@ -80,7 +84,8 @@ function targetFPS(sourceFPS, max) {
 function sizeTargets(source, resolutions) {
   const out = [];
   const length = source.container.duration;
-  for (const total of [8000, 16000, 25000]) { // kB
+  for (const total of [8000, 16000, 25000]) {
+    // kB
     const preset = `size_${total / 1000}mb`;
 
     // undershoot the target to leave room for container overhead and bitrate variance

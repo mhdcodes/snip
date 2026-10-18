@@ -45,7 +45,8 @@ pnpm start
 
 `pnpm start` runs snip with the ffmpeg on your PATH. It turns off Chromium's sandbox, which
 needs setup as root on many Linux systems; the downloads keep it where the system allows it.
-Run the tests with `pnpm test`.
+Run the tests with `pnpm test`. `pnpm lint` checks the code with oxlint and oxfmt, and
+`pnpm format` fixes the formatting; CI runs both checks on every push and pull request.
 
 To build the downloads, run `pnpm dist`. They land in `dist`; `electron-builder.yml` says
 what goes into them. To include ffmpeg the way the releases do, put it in `ffmpeg/bin`
@@ -59,13 +60,18 @@ snip is an [Electron](https://www.electronjs.org) app:
   `videos.js` runs them and keeps track of the opened videos.
 - `src/renderer` is the interface: plain HTML, CSS and JavaScript. With `pnpm start`, Ctrl+R
   reloads it after a change and Ctrl+Shift+I opens the developer tools.
-- `src/main/preload.cjs` connects the two.
+- `src/preload` connects the two.
 
 The preview can't play every format ffmpeg reads, like HEVC or WMV. For those, snip first
 makes a smaller copy to edit with; the conversion still uses the original.
 
 ## Good to know
 
-Some presets keep the original video as it is, to save time and quality. With those, a part
+Some presets keep the original video as it is, to save time and quality. With those, the clip
 can start a few frames early. If you need exact cuts, pick a preset that says nothing about
 keeping the original.
+
+## License
+
+[MIT](LICENSE). The downloads include ffmpeg, which is licensed under the
+[GPL](https://ffmpeg.org/legal.html).

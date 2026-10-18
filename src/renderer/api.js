@@ -1,4 +1,4 @@
-// Calls into snip's main process, see preload.cjs. Every function returns a promise.
+// Calls into snip's main process, see src/preload/index.cjs. Every function returns a promise.
 
 const snip = window.snip;
 

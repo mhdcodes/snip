@@ -1,0 +1,3 @@
+# LF everywhere, also in Windows checkouts, so Prettier's check passes in CI
+* text=auto eol=lf
+*.png binary

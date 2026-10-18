@@ -1,21 +1,30 @@
 {
   "name": "snip",
   "productName": "snip",
+  "private": true,
   "version": "0.0.0",
   "description": "Cut, crop and shrink videos",
   "author": "MHD",
+  "license": "MIT",
   "homepage": "https://github.com/mhdcodes/snip",
   "desktopName": "snip.desktop",
   "type": "module",
   "main": "src/main/main.js",
   "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "electron . --no-sandbox",
     "test": "node --test",
+    "lint": "oxlint --deny-warnings && oxfmt --check",
+    "format": "oxfmt",
     "dist": "electron-builder --publish never"
   },
   "devDependencies": {
     "electron": "44.5.1",
-    "electron-builder": "26.17.0"
+    "electron-builder": "26.17.0",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0"
   }
 }

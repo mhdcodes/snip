@@ -6,8 +6,8 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { baseName, build, concatList } from "./media/commands.js";
-import { clean, duration, target } from "./media/format.js";
+import { baseName, build } from "./media/commands.js";
+import { clean, target } from "./media/format.js";
 import { choose } from "./media/presets.js";
 import { probe } from "./media/probe.js";
 import { run } from "./media/run.js";
@@ -47,7 +47,13 @@ export class Videos {
     const name = path.basename(file);
     const controller = new AbortController();
     const v = {
-      id, name, base: baseName(name), dir, path: file, meta, controller,
+      id,
+      name,
+      base: baseName(name),
+      dir,
+      path: file,
+      meta,
+      controller,
       thumbs: null, // settles once ffmpeg has written every thumbnail
       preview: null, // the preview copy, see makePreview
     };
@@ -78,7 +84,13 @@ export class Videos {
     const v = this.video(id);
     if (!v.preview) {
       const file = path.join(v.dir, "preview.mp4");
-      const done = preview(v.meta, v.path, file, ({ percent }) => this.send("preview", { id, percent }), v.controller.signal);
+      const done = preview(
+        v.meta,
+        v.path,
+        file,
+        ({ percent }) => this.send("preview", { id, percent }),
+        v.controller.signal,
+      );
       v.preview = { file, done };
       done.catch(() => {}); // the caller sees failures, removing the video must not
     }
@@ -112,16 +124,14 @@ export class Videos {
   plan(id, settings) {
     const v = this.video(id);
     const { instructions, videoFormats, audioFormats } = this.choose(v, settings);
-    const shown = { input: v.name, concat: "concat.txt", name: v.base };
-    const plan = {
+    const shown = { input: v.name, name: v.base };
+    return {
       instructions,
       target: target(instructions),
       videoFormats,
       audioFormats,
       commands: build(v.meta, instructions, shown, this.encoders).map((c) => c.args), // for display, with plain file names
     };
-    if (instructions.modification.cuts.length > 1) plan.concat = concatList(v.name, instructions.modification.cuts);
-    return plan;
   }
 
   // startJob converts the video with the page's settings and returns the job's state:
@@ -137,11 +147,7 @@ export class Videos {
     const jobID = randomBytes(12).toString("hex");
     const dir = path.join(v.dir, `job-${jobID}`);
     await fs.mkdir(dir, { mode: 0o700 });
-    const paths = { input: v.path, concat: path.join(dir, "concat.txt"), dir, name: v.base };
-    const cmds = build(v.meta, ins, paths, this.encoders);
-    if (ins.modification.cuts.length > 1) {
-      await fs.writeFile(paths.concat, concatList(v.path, ins.modification.cuts), { mode: 0o600 });
-    }
+    const cmds = build(v.meta, ins, { input: v.path, dir, name: v.base }, this.encoders);
 
     const last = cmds.at(-1);
     const controller = new AbortController();
@@ -150,7 +156,14 @@ export class Videos {
       dir,
       file: last.file,
       controller,
-      state: { id: jobID, status: "running", progress: 0, fileName: path.basename(last.file), type: last.type, target: target(ins) },
+      state: {
+        id: jobID,
+        status: "running",
+        progress: 0,
+        fileName: path.basename(last.file),
+        type: last.type,
+        target: target(ins),
+      },
     };
     for (const other of [...this.jobs.values()].filter((j) => j.video === v)) {
       this.jobs.delete(other.state.id);
@@ -159,7 +172,7 @@ export class Videos {
     this.jobs.set(jobID, job);
 
     const signal = AbortSignal.any([v.controller.signal, controller.signal]);
-    job.done = this.runJob(job, cmds, duration(ins.modification), signal);
+    job.done = this.runJob(job, cmds, ins.modification.cut.duration, signal);
     return job.state;
   }
 

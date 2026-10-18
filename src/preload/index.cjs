@@ -1,4 +1,4 @@
-// Gives the page window.snip, the calls into the main process. See handleIPC in main.js.
+// Gives the page window.snip, the calls into the main process. See handleIPC in src/main/main.js.
 
 const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
