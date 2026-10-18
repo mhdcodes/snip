@@ -29,6 +29,7 @@ export function thumbnails(source, input, dir, signal) {
 
   const args = [];
   if (interval >= 2) args.push("-skip_frame", "nokey"); // keyframes are close enough and much faster to decode
+  // prettier-ignore
   args.push(
     "-hide_banner", "-nostdin", "-loglevel", "error",
     "-flags2", "fast",
@@ -43,6 +44,8 @@ export function thumbnails(source, input, dir, signal) {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", args, { stdio: "ignore", windowsHide: true, signal });
     ffmpeg.on("error", (error) => error.name !== "AbortError" && reject(error));
-    ffmpeg.on("close", (code) => (code === 0 || signal?.aborted ? resolve() : reject(new Error(`ffmpeg exit code ${code}`))));
+    ffmpeg.on("close", (code) =>
+      code === 0 || signal?.aborted ? resolve() : reject(new Error(`ffmpeg exit code ${code}`)),
+    );
   });
 }

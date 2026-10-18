@@ -2,8 +2,8 @@
 //
 // The window shows src/renderer from the snip:// scheme, which also serves the videos,
 // thumbnails and results it plays. Everything else, like opening a video or starting a
-// conversion, goes through the IPC handlers below; preload.cjs gives them to the page
-// as window.snip.
+// conversion, goes through the IPC handlers below; src/preload/index.cjs gives them to the
+// page as window.snip.
 
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, net, protocol } from "electron";
 import { existsSync } from "node:fs";
@@ -50,7 +50,7 @@ app.whenReady().then(async () => {
     height: 760,
     title: "snip",
     backgroundColor: "#0a0a0a", // the page's --bg, so the window doesn't flash white before it loads
-    webPreferences: { preload: path.join(here, "preload.cjs") },
+    webPreferences: { preload: path.join(here, "..", "preload", "index.cjs") },
   });
   // the page never leaves snip://; a dropped file must not replace it either
   win.webContents.on("will-navigate", (event) => event.preventDefault());
@@ -79,7 +79,9 @@ async function serve(request) {
     if (parts[0] === "api") {
       const file = await mediaFile(parts.slice(1), url.searchParams);
       // net.fetch answers range requests, so the player can seek
-      return file ? net.fetch(pathToFileURL(file).href, { headers: request.headers }) : new Response("not found", { status: 404 });
+      return file
+        ? net.fetch(pathToFileURL(file).href, { headers: request.headers })
+        : new Response("not found", { status: 404 });
     }
     const file = path.join(pageDir, ...parts.map(decodeURIComponent));
     if (!file.startsWith(pageDir + path.sep)) return new Response("not found", { status: 404 });
@@ -111,7 +113,7 @@ function handleIPC() {
       filters: [
         {
           name: "Videos",
-          extensions: ["mp4", "m4v", "mov", "mkv", "webm", "avi", "wmv", "flv", "mpg", "mpeg", "ts", "mts", "m2ts", "3gp", "ogv", "gif"],
+          extensions: "mp4 m4v mov mkv webm avi wmv flv mpg mpeg ts mts m2ts 3gp ogv gif".split(" "),
         },
         { name: "All files", extensions: ["*"] },
       ],
@@ -128,7 +130,10 @@ function handleIPC() {
   handle("cancel-job", (id) => videos.cancelJob(id));
   handle("save-result", async (jobID) => {
     const { file, name } = videos.result(jobID);
-    const { canceled, filePath } = await dialog.showSaveDialog(win, { title: "Save result", defaultPath: path.join(dir, name) });
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      title: "Save result",
+      defaultPath: path.join(dir, name),
+    });
     if (canceled || !filePath) return "";
     await fs.copyFile(file, filePath);
     return filePath;

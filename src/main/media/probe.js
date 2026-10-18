@@ -20,7 +20,7 @@ export async function probe(path, fallbackDuration = 0, signal) {
       { maxBuffer: 64 << 20, windowsHide: true, signal },
     ));
   } catch (error) {
-    throw new Error(`ffprobe: ${(error.stderr || error.message).trim()}`);
+    throw new Error(`ffprobe: ${(error.stderr || error.message).trim()}`, { cause: error });
   }
   return parseProbe(stdout, fallbackDuration);
 }
@@ -30,7 +30,7 @@ export function parseProbe(raw, fallbackDuration) {
   try {
     p = JSON.parse(raw);
   } catch (error) {
-    throw new Error(`parse ffprobe output: ${error.message}`);
+    throw new Error(`parse ffprobe output: ${error.message}`, { cause: error });
   }
 
   const f = {
@@ -112,7 +112,9 @@ export async function detectEncoders() {
   try {
     ({ stdout } = await exec("ffmpeg", ["-hide_banner", "-encoders"], { maxBuffer: 16 << 20, windowsHide: true }));
   } catch (error) {
-    throw new Error(error.code === "ENOENT" ? "ffmpeg not found in PATH, install ffmpeg first" : `run ffmpeg: ${error.message}`);
+    const message =
+      error.code === "ENOENT" ? "ffmpeg not found in PATH, install ffmpeg first" : `run ffmpeg: ${error.message}`;
+    throw new Error(message, { cause: error });
   }
   const names = new Set(stdout.split("\n").map((line) => line.trim().split(/\s+/)[1]));
   if (!names.has("libx264")) throw new Error("ffmpeg was built without libx264");

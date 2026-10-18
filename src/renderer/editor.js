@@ -1,7 +1,7 @@
 // The editing bench: video preview, crop box and film strip timeline.
 //
-// Times are in seconds. A "cut" is a part of the video that ends up in the result:
-// { start, duration }. Cuts are kept in order and never overlap.
+// Times are in seconds. The "cut" is the part of the video that ends up in the result:
+// { start, duration }.
 // The crop removes a fraction (0-1) of the frame on each side: { top, right, bottom, left }.
 
 import { sourceURL, thumbURL } from "./api.js";
@@ -27,7 +27,7 @@ export function openEditor(video, modification, onChange) {
   const fallback = $("preview-fallback");
   const film = $("film");
 
-  let cursor = mod.cuts[0].start;
+  let cursor = mod.cut.start;
   let paused = true;
   let dragging = false;
   let canPlayVideo = true;
@@ -68,7 +68,7 @@ export function openEditor(video, modification, onChange) {
   // ---------- playback ----------
 
   function isPlaying() {
-    const c = mod.cuts[0];
+    const c = mod.cut;
     return !paused && !dragging && cursor >= c.start - frame && cursor <= c.start + c.duration - frame;
   }
 
@@ -83,7 +83,7 @@ export function openEditor(video, modification, onChange) {
 
   // followPlayback moves the cursor while playing and keeps it inside the selection.
   function followPlayback(time) {
-    const c = mod.cuts[0];
+    const c = mod.cut;
     if (time < c.start) {
       setCursor(c.start);
     } else if (time < c.start + c.duration - frame) {
@@ -98,7 +98,7 @@ export function openEditor(video, modification, onChange) {
       paused = true;
     } else {
       paused = false;
-      const c = mod.cuts[0];
+      const c = mod.cut;
       if (cursor < c.start || cursor > c.start + c.duration - Math.min(1, c.duration / 2)) {
         setCursor(c.start);
       }
@@ -206,16 +206,16 @@ export function openEditor(video, modification, onChange) {
 
   // setSelection replaces the part of the video that is kept.
   function setSelection(cut, done) {
-    mod.cuts = [cut];
-    drawCuts();
-    drawParts();
+    mod.cut = cut;
+    drawCut();
+    drawSelection();
     emit(done);
   }
 
   // dragTimeline edits the selection while dragging. update gets the pointer data and the
   // selection as it was when the drag started, and returns the new selection.
   function dragTimeline(event, update) {
-    const before = { ...mod.cuts[0] };
+    const before = { ...mod.cut };
     let latest = before;
     dragging = true;
     syncPlayback();
@@ -245,14 +245,17 @@ export function openEditor(video, modification, onChange) {
     }
   }
 
-  function drawCuts() {
-    const box = $("cuts");
+  function drawCut() {
+    const box = $("cut");
     box.innerHTML = "";
-    const cut = mod.cuts[0];
+    const cut = mod.cut;
     const pct = (time) => (time / duration) * 100 + "%";
 
     // dimmed film on both sides; dragging on it selects a new part
-    for (const [from, to] of [[0, cut.start], [cut.start + cut.duration, duration]]) {
+    for (const [from, to] of [
+      [0, cut.start],
+      [cut.start + cut.duration, duration],
+    ]) {
       if (to - from <= 0) continue;
       const gap = document.createElement("div");
       gap.className = "gap";
@@ -280,7 +283,12 @@ export function openEditor(video, modification, onChange) {
       if (event.pointerType !== "mouse") {
         // on touch screens dragging the body scrubs instead, moving it is too fiddly
         const start = cursor;
-        drag(event, film, ({ dx }) => setCursor(clamp(start + dx * duration, 0, duration)), () => {});
+        drag(
+          event,
+          film,
+          ({ dx }) => setCursor(clamp(start + dx * duration, 0, duration)),
+          () => {},
+        );
         return;
       }
       dragTimeline(event, ({ dx }, before) => {
@@ -311,14 +319,15 @@ export function openEditor(video, modification, onChange) {
         setCursor(c.start + c.duration + d);
         return { start: c.start, duration: c.duration + d };
       };
-      handle.onpointerenter = () => !dragging && !isPlaying() && setCursor(side === "start" ? cut.start : cut.start + cut.duration);
+      handle.onpointerenter = () =>
+        !dragging && !isPlaying() && setCursor(side === "start" ? cut.start : cut.start + cut.duration);
       handle.onpointerdown = (event) => dragTimeline(event, ({ dx }, before) => resize(before, dx * duration));
       handle.onkeydown = (event) => {
         const step = event.shiftKey ? 1 : frame;
         const change = { ArrowLeft: -step, ArrowRight: step }[event.key];
         if (change) {
           event.preventDefault();
-          setSelection(resize({ ...mod.cuts[0] }, change), true);
+          setSelection(resize({ ...mod.cut }, change), true);
           box.querySelectorAll(".handle")[side === "start" ? 0 : 1]?.focus();
         }
       };
@@ -326,16 +335,14 @@ export function openEditor(video, modification, onChange) {
     }
   }
 
-  // drawParts shows start, length and end of the selection as editable fields.
-  function drawParts() {
-    const box = $("parts");
-    if (box.contains(document.activeElement)) {
+  // drawSelection shows start, length and end of the selection as editable fields.
+  function drawSelection() {
+    const row = $("selection");
+    if (row.contains(document.activeElement)) {
       return; // don't replace the field someone is typing in
     }
-    box.innerHTML = "";
-    const cut = mod.cuts[0];
-    const row = document.createElement("div");
-    row.className = "part";
+    row.innerHTML = "";
+    const cut = mod.cut;
     const name = document.createElement("span");
     name.className = "name";
     name.textContent = "Selection";
@@ -365,24 +372,18 @@ export function openEditor(video, modification, onChange) {
     };
 
     const end = cut.start + cut.duration;
-    field("Start", cut.start, cut.start, (v) => ({ start: clamp(v, 0, duration - cut.duration), duration: cut.duration }));
-    field("Length", cut.duration, end, (v) => ({ start: cut.start, duration: clamp(v, MIN_CUT, duration - cut.start) }));
-    field("End", end, end, (v) => ({ start: cut.start, duration: clamp(v, cut.start + MIN_CUT, duration) - cut.start }));
-    box.append(row);
-  }
-
-  // drawTicks puts time labels under the film at a readable spacing.
-  function drawTicks() {
-    const box = $("ticks");
-    box.innerHTML = "";
-    const step = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600].find((s) => duration / s <= 6) ?? 3600;
-    for (let time = step; time < duration - step / 3; time += step) {
-      const label = document.createElement("span");
-      // the ticks row spans the play key too, so skip past it
-      label.style.left = `calc(var(--tick-inset) + (100% - var(--tick-inset)) * ${time / duration})`;
-      label.textContent = formatTime(time).replace(/\.00$/, "");
-      box.append(label);
-    }
+    field("Start", cut.start, cut.start, (v) => ({
+      start: clamp(v, 0, duration - cut.duration),
+      duration: cut.duration,
+    }));
+    field("Length", cut.duration, end, (v) => ({
+      start: cut.start,
+      duration: clamp(v, MIN_CUT, duration - cut.start),
+    }));
+    field("End", end, end, (v) => ({
+      start: cut.start,
+      duration: clamp(v, cut.start + MIN_CUT, duration) - cut.start,
+    }));
   }
 
   // loadThumbs fetches the film strip frames one at a time, so they don't block other requests.
@@ -494,9 +495,8 @@ export function openEditor(video, modification, onChange) {
 
   // ---------- start ----------
 
-  drawCuts();
-  drawParts();
-  drawTicks();
+  drawCut();
+  drawSelection();
   drawCrop();
   setCursor(cursor);
   loadThumbs();

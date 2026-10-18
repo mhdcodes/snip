@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["dist/", "ffmpeg/"],
+  "rules": {
+    "no-undef": "error",
+    "no-empty": "error",
+    "preserve-caught-error": "error"
+  },
+  "overrides": [
+    { "files": ["src/main/**", "src/preload/**", "test/**", "*.js"], "env": { "node": true } },
+    { "files": ["src/renderer/**"], "env": { "browser": true } }
+  ]
+}

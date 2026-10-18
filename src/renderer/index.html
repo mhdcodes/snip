@@ -26,7 +26,9 @@
               <button type="button" id="open-button" class="btn primary">Select video</button>
               <span class="pick-hint">or drop a video anywhere</span>
             </div>
-            <p class="privacy">Your video stays on this computer. snip runs ffmpeg locally and sends nothing to the internet.</p>
+            <p class="privacy">
+              Your video stays on this computer. snip runs ffmpeg locally and sends nothing to the internet.
+            </p>
           </div>
         </div>
       </section>
@@ -43,7 +45,10 @@
         <h1 id="preparing-title"></h1>
         <div class="bar"><div id="preparing-bar" class="fill" style="width: 0%"></div></div>
         <p id="preparing-percent" class="percent mono"></p>
-        <p class="stats">The preview can't show this format, so snip makes a smaller copy to edit with. Converting still uses the original.</p>
+        <p class="stats">
+          The preview can't show this format, so snip makes a smaller copy to edit with. Converting still uses the
+          original.
+        </p>
         <button type="button" class="btn ghost" data-action="change">Cancel</button>
       </section>
 
@@ -76,14 +81,11 @@
             <button type="button" id="play" class="play"></button>
             <div id="film" class="film">
               <div id="strip" class="strip"></div>
-              <div id="cuts"></div>
+              <div id="cut"></div>
               <div id="cursor" class="cursor"></div>
             </div>
           </div>
-          <div id="ticks" class="ticks mono"></div>
-
-          <p class="hint">Drag the ends to trim, or drag on the dimmed film to select a new part. Space plays and pauses.</p>
-          <div id="parts" class="parts"></div>
+          <div id="selection" class="selection"></div>
         </div>
 
         <form id="settings" class="panel">

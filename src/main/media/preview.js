@@ -9,6 +9,7 @@ import { run } from "./run.js";
 // stays quick; conversions still read the original. onProgress gets { percent }.
 export function preview(source, input, file, onProgress, signal) {
   const res = fitResolution(source.video, 960, 540, DEFAULT_FPS);
+  // prettier-ignore
   const args = [
     "-i", input,
     "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn",
@@ -19,5 +20,10 @@ export function preview(source, input, file, onProgress, signal) {
     "-f", "mp4", "-movflags", "+faststart",
     file,
   ];
-  return run([{ args, file, type: "video/mp4" }], source.container.duration, ({ percent }) => onProgress({ percent }), signal);
+  return run(
+    [{ args, file, type: "video/mp4" }],
+    source.container.duration,
+    ({ percent }) => onProgress({ percent }),
+    signal,
+  );
 }
