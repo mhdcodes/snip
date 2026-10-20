@@ -22,6 +22,8 @@ The [releases page](https://github.com/mhdcodes/snip/releases) has, each with ff
 - `snip-linux-amd64.deb`: for Ubuntu 22.04, Debian 12 and newer. Install it with
   `sudo apt install ./snip-linux-amd64.deb`.
 - `snip-linux-x86_64.AppImage`: for any other Linux distribution from the last few years.
+- `snip-mac-arm64.dmg`: for Macs with Apple silicon (M1 and newer).
+- `snip-mac-x64.dmg`: for Macs with an Intel processor.
 
 To run the AppImage, make it executable and start it:
 
@@ -32,6 +34,14 @@ chmod +x snip-linux-x86_64.AppImage
 
 On Ubuntu 24.04 and newer, the system doesn't let AppImages use Chromium's sandbox, so snip
 turns it off there. snip only shows its own pages, never websites.
+
+On a Mac, open the DMG and drag snip to Applications. snip isn't notarized by Apple, so the
+first time you open it macOS refuses. Go to System Settings, Privacy & Security, and click
+Open Anyway, or run this once:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/snip.app
+```
 
 ## Build from source
 

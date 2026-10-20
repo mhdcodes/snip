@@ -58,3 +58,12 @@ win:
 
 nsis:
   artifactName: snip-windows-${arch}-setup.${ext}
+
+mac:
+  target: dmg
+  category: public.app-category.video
+  artifactName: snip-mac-${arch}.${ext}
+  # No Apple Developer ID, so sign ad hoc: Apple Silicon refuses to run unsigned code.
+  # The hardened runtime only matters for notarization, which needs a real ID.
+  identity: "-"
+  hardenedRuntime: false
