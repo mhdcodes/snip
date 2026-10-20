@@ -1,0 +1,46 @@
+/* The source for tailwind.css: Tailwind's layers plus the page's own components. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .wrap {
+    @apply mx-auto max-w-6xl px-5;
+  }
+  .link {
+    @apply font-semibold text-paper/70 hover:text-accent;
+  }
+  .btn {
+    @apply inline-flex w-fit items-center gap-3 rounded-full bg-accent px-7 py-4 font-bold text-ink transition hover:bg-paper;
+  }
+  /* each section is a clip: a timecode on the left rail, the content on the right */
+  .clip {
+    @apply grid gap-4 border-t border-paper/15 py-16 md:grid-cols-[9rem_1fr] md:py-24;
+  }
+  .tc {
+    @apply font-mono text-sm text-paper/40 md:sticky md:top-16 md:self-start;
+  }
+  .tc b {
+    @apply mr-2 font-normal text-accent;
+  }
+  .clip h2 {
+    @apply font-display text-[clamp(2.5rem,7vw,5.5rem)] uppercase leading-[.9];
+  }
+  .clip h2 + p {
+    @apply mt-5 max-w-lg text-lg text-paper/60;
+  }
+  .dl {
+    @apply flex items-center justify-between gap-4 border-b border-paper/15 py-5 transition hover:text-accent;
+  }
+  .dl b {
+    @apply font-display text-xl uppercase sm:text-2xl;
+  }
+  .dl span {
+    @apply font-mono text-xs text-paper/50;
+  }
+}
+
+:focus-visible {
+  @apply outline outline-[3px] outline-offset-2 outline-accent;
+}

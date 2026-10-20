@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>snip: cut and compress videos</title>
+    <link rel="icon" href="favicon.svg" />
+    <link rel="stylesheet" href="tailwind.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Caveat:wght@700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <!-- Night 4, Timecode: the page is the clip. A playhead fills as you scroll, each section starts at a timecode. -->
+  <body class="bg-ink text-paper antialiased">
+    <div class="fixed inset-x-0 top-0 z-10 bg-ink/90 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+      <div class="wrap flex items-center gap-4 py-3">
+        <a href="#" class="font-display text-xl">snip<span class="text-accent">.</span></a>
+        <div class="relative h-1.5 flex-1 rounded-full bg-paper/15" aria-hidden="true">
+          <div id="playhead" class="absolute inset-y-0 left-0 w-0 rounded-full bg-accent"></div>
+        </div>
+        <span id="tc" class="w-24 text-right font-mono text-xs text-paper/50" aria-hidden="true">00:00 / 01:00</span>
+        <a href="https://github.com/mhdcodes/snip" class="link hidden text-sm sm:block">GitHub</a>
+      </div>
+    </div>
+
+    <main class="wrap pt-14">
+      <header class="clip border-t-0 md:pt-32">
+        <p class="tc"><b>●</b>00:00</p>
+        <div>
+          <h1 class="font-display text-[clamp(3rem,11vw,9rem)] uppercase leading-[.9] tracking-tight">
+            Video<br /><span class="relative"
+              >too big<span
+                class="absolute bottom-full right-0 -rotate-6 whitespace-nowrap font-hand text-[max(.3em,1.35rem)] normal-case leading-none tracking-normal text-accent"
+              >
+                to send</span
+              >?</span
+            ><br /><span class="text-accent">Snip it.</span>
+          </h1>
+          <p class="mt-8 max-w-md text-lg text-paper/70">
+            Cut, crop and compress a video so it fits on Discord, WhatsApp or in an email. Free, and it runs on your
+            computer.
+          </p>
+          <a href="#download" class="btn mt-8">Download snip <span aria-hidden="true">↓</span></a>
+        </div>
+      </header>
+
+      <section class="clip">
+        <p class="tc"><b>●</b>00:10</p>
+        <div>
+          <h2>Trim.</h2>
+          <p>Drop a video anywhere on the window and keep only the part you want.</p>
+        </div>
+      </section>
+
+      <section class="clip">
+        <p class="tc"><b>●</b>00:20</p>
+        <div>
+          <h2>Crop.</h2>
+          <p>Freely, or to 16:9, 4:3, 3:4 or 9:16.</p>
+        </div>
+      </section>
+
+      <section class="clip">
+        <p class="tc"><b>●</b>00:30</p>
+        <div>
+          <h2>
+            Shrink to <span class="text-accent">SD</span>, <span class="text-accent">HD</span> or a
+            <span class="text-accent">GIF</span>.
+          </h2>
+          <p>
+            Or aim for about 8, 16 or 25 MB, for email, WhatsApp or Discord. Keep the sound, lower its quality, or
+            remove it.
+          </p>
+        </div>
+      </section>
+
+      <section class="clip">
+        <p class="tc"><b>●</b>00:40</p>
+        <div>
+          <h2>Stays on your computer.</h2>
+          <p>snip runs ffmpeg locally, and shows you every command before it runs.</p>
+        </div>
+      </section>
+
+      <section id="download" class="clip scroll-mt-14">
+        <p class="tc"><b>●</b>00:50</p>
+        <div>
+          <h2 class="text-accent">Get snip</h2>
+          <div class="mt-10 border-t border-paper/15">
+            <a href="https://github.com/mhdcodes/snip/releases/latest/download/snip-windows-x64-setup.exe" class="dl"
+              ><b>Windows</b><span>windows-x64-setup.exe</span></a
+            >
+            <a href="https://github.com/mhdcodes/snip/releases/latest/download/snip-mac-arm64.dmg" class="dl"
+              ><b>macOS · Apple silicon</b><span>mac-arm64.dmg</span></a
+            >
+            <a href="https://github.com/mhdcodes/snip/releases/latest/download/snip-mac-x64.dmg" class="dl"
+              ><b>macOS · Intel</b><span>mac-x64.dmg</span></a
+            >
+            <a href="https://github.com/mhdcodes/snip/releases/latest/download/snip-linux-amd64.deb" class="dl"
+              ><b>Debian · Ubuntu</b><span>linux-amd64.deb</span></a
+            >
+            <a href="https://github.com/mhdcodes/snip/releases/latest/download/snip-linux-x86_64.AppImage" class="dl"
+              ><b>Other Linux</b><span>linux-x86_64.AppImage</span></a
+            >
+          </div>
+          <p class="mt-6 text-sm text-paper/50">ffmpeg is included in every download.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wrap flex flex-wrap justify-between gap-4 border-t border-paper/15 py-6 text-sm text-paper/50">
+      <span>Free and open source</span>
+      <a href="https://github.com/mhdcodes/snip" class="hover:text-accent">github.com/mhdcodes/snip</a>
+    </footer>
+
+    <script>
+      // the scroll position is the playhead: each clip starts 10 s after the one before,
+      // and the counter reads its timecode when it reaches the top; the bottom is 01:00
+      const LENGTH = 60;
+      const BAR = 56; // height of the fixed bar
+      const playhead = document.getElementById("playhead");
+      const tc = document.getElementById("tc");
+      const clips = [...document.querySelectorAll(".clip")];
+      const mmss = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+
+      function update() {
+        const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+        const stops = clips.map((c, i) => [Math.min(max, Math.max(0, c.offsetTop - BAR)), i * 10]);
+        stops.push([max, LENGTH]);
+        // clips near the end can't scroll up to the bar, so spread their stops over what's left
+        const k = stops.findIndex(([x], i) => i > 0 && x >= max);
+        if (k > 0) {
+          const from = stops[k - 1][0];
+          const n = stops.length - k;
+          for (let j = k; j < stops.length; j++) stops[j][0] = from + ((max - from) * (j - k + 1)) / n;
+        }
+
+        // a page that fits the window can't scroll, so it stays at the start
+        let t = 0;
+        for (let i = 1; max > 0 && i < stops.length; i++) {
+          const [x0, t0] = stops[i - 1];
+          const [x1, t1] = stops[i];
+          if (scrollY >= x1) {
+            t = t1;
+            continue;
+          }
+          if (x1 > x0) t = t0 + ((scrollY - x0) / (x1 - x0)) * (t1 - t0);
+          break;
+        }
+
+        playhead.style.width = (t / LENGTH) * 100 + "%";
+        tc.textContent = mmss(Math.round(t)) + " / " + mmss(LENGTH);
+      }
+      addEventListener("scroll", update, { passive: true });
+      addEventListener("resize", update);
+      update();
+    </script>
+  </body>
+</html>

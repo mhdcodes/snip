@@ -75,6 +75,19 @@ snip is an [Electron](https://www.electronjs.org) app:
 The preview can't play every format ffmpeg reads, like HEVC or WMV. For those, snip first
 makes a smaller copy to edit with; the conversion still uses the original.
 
+## Website
+
+`website` is the landing page: plain HTML styled with [Tailwind](https://tailwindcss.com).
+Its stylesheet, `tailwind.css`, is built from `style.css` and the classes in `index.html`, and is
+committed so the page needs no build step to serve. After changing either file, rebuild it:
+
+```sh
+npx tailwindcss@3.4.17 -c website/tailwind.config.js -i website/style.css -o website/tailwind.css --minify
+```
+
+Tailwind only includes the classes it finds in `index.html`, so a new class shows up unstyled
+until you rebuild.
+
 ## Good to know
 
 Some presets keep the original video as it is, to save time and quality. With those, the clip
