@@ -2,5 +2,5 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "printWidth": 120,
   "sortPackageJson": false,
-  "ignorePatterns": ["dist/", "ffmpeg/", "pnpm-lock.yaml"]
+  "ignorePatterns": ["dist/", "ffmpeg/", "pnpm-lock.yaml", "website/tailwind.css"]
 }
