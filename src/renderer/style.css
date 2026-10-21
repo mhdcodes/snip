@@ -1,25 +1,50 @@
-/* Flat blocks on near-black with hairline borders. White is the
-   accent: it is the primary action, the crop corners, the cut marks,
-   the handles and the progress. Red appears only when ffmpeg fails or
-   a plan can't be built. Everything else is one grey scale.
+/* The app's layout with the website's look (website/tailwind.config.js).
+   Ink ground, warm paper text, hairlines of paper at 15 %. Yellow is the
+   one accent: the primary action, the crop corners, the cut marks, the
+   handles, the progress and the focus ring. Headings are Archivo Black in
+   capitals, like the website's. Red appears only when ffmpeg fails or a
+   plan can't be built.
 
    snip has one, dark, theme. The video well (stage, film, results)
    is pure black. */
 
+/* bundled, the app's CSP loads nothing from the internet. SIL Open Font License. */
+@font-face {
+  font-family: "Archivo Black";
+  font-display: swap;
+  src: url("fonts/archivo-black-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Archivo Black";
+  font-display: swap;
+  src: url("fonts/archivo-black-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
-  --bg: #0a0a0a;
-  --block: #111111;
-  --raised: #181818;
-  --ink: #ededed;
-  --muted: #8f8f8f;
-  --line: #2e2e2e;
-  --line-strong: #444444;
+  /* the website's ink and paper; the greys are paper over ink */
+  --bg: #0b0b0b;
+  --block: #141413; /* paper at 4 % */
+  --raised: #1c1b1a; /* paper at 7 % */
+  --ink: #f5f2e8; /* paper: the text colour */
+  --muted: #a4a29b; /* paper at 65 % */
+  --line: #2e2d2b; /* paper at 15 % */
+  --line-strong: #4d4c48; /* paper at 28 % */
+  --accent: #ffd400;
+  --on-accent: #0b0b0b;
   --bad: #ff6259;
 
   --well: #000000;
 
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, sans-serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace;
+  --display: "Archivo Black", Impact, system-ui, sans-serif;
 
   --radius: 8px;
   --btn-h: 48px;
@@ -65,6 +90,8 @@ body {
   background: var(--bg);
   color: var(--ink);
   font: 16px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 main {
@@ -85,7 +112,7 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -101,30 +128,32 @@ a {
   justify-content: center;
   gap: 0.5em;
   min-height: var(--btn-h);
-  padding: 0.5em 1.2em;
+  padding: 0.5em 1.5em;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: 999px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease;
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .btn:active {
   transform: translateY(1px);
 }
 
+/* the website's button: yellow, paper on hover */
 .btn.primary {
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .btn.primary:hover:not([disabled]) {
-  background: var(--muted);
-  border-color: var(--muted);
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
 .btn.ghost {
@@ -134,8 +163,8 @@ a {
 }
 
 .btn.ghost:hover:not([disabled]) {
-  background: var(--raised);
-  border-color: var(--ink);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .btn[disabled] {
@@ -149,7 +178,8 @@ a {
 
 /* "Copied": same ghost button, confirmed state */
 .btn.ghost.copied {
-  border-color: var(--ink);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .btn-row {
@@ -158,12 +188,15 @@ a {
   gap: 0.6rem;
 }
 
+/* headings are the website's display type: Archivo Black in capitals */
 h1 {
   margin: 0 0 1.35rem;
+  font-family: var(--display);
   font-size: clamp(1.4rem, 1.2rem + 0.7vw, 1.7rem);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  font-weight: 400;
+  text-transform: uppercase;
   overflow-wrap: anywhere;
 }
 
@@ -184,10 +217,9 @@ h1 {
 
 .hero h1 {
   font-size: clamp(2.6rem, 1.5rem + 5.5vw, 5rem);
-  line-height: 1;
-  letter-spacing: -0.04em;
+  line-height: 0.9;
+  letter-spacing: -0.025em;
   margin-bottom: 0.4em;
-  font-weight: 750;
 }
 
 .lede {
@@ -311,7 +343,7 @@ h1 {
   position: absolute;
   z-index: 1; /* own layer, so the shade also paints over the video */
   box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.72);
-  outline: 1px dashed rgb(255 255 255 / 0.6);
+  outline: 1px dashed rgb(245 242 232 / 0.6);
   cursor: move;
 }
 
@@ -323,15 +355,15 @@ h1 {
 
 .stage:hover .crop.full,
 .stage:focus-within .crop.full {
-  outline-color: rgb(255 255 255 / 0.3);
+  outline-color: rgb(245 242 232 / 0.3);
 }
 
 .corner {
   position: absolute;
   width: 18px;
   height: 18px;
-  border: 0 solid var(--ink);
-  opacity: 0.75;
+  border: 0 solid var(--accent);
+  opacity: 0.9;
 }
 
 .corner.tl {
@@ -365,7 +397,7 @@ h1 {
 
 .stage:hover .crop.full .corner,
 .stage:focus-within .crop.full .corner {
-  opacity: 0.75;
+  opacity: 0.9;
 }
 
 .aspects {
@@ -380,26 +412,30 @@ h1 {
 
 .aspects button {
   font: 600 0.72rem var(--mono);
-  padding: 0.25em 0.6em;
+  padding: 0.25em 0.7em;
   border: 1px solid transparent;
-  border-radius: 4px;
-  background: rgb(255 255 255 / 0.1);
-  color: #fff;
+  border-radius: 999px;
+  background: rgb(11 11 11 / 0.6);
+  color: var(--ink);
   cursor: pointer;
 }
 
+.aspects button:hover {
+  border-color: rgb(245 242 232 / 0.4);
+}
+
 .aspects button[aria-pressed="true"] {
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .stamp {
   position: absolute;
   bottom: 0;
   padding: 0.15em 0.55em;
-  background: rgb(0 0 0 / 0.75);
-  color: #fff;
-  font: 600 0.78rem var(--mono);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 0.78rem var(--mono);
   pointer-events: none;
   z-index: 2;
 }
@@ -429,8 +465,8 @@ h1 {
 }
 
 .play:hover {
-  background: var(--raised);
-  border-color: var(--ink);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .play svg {
@@ -458,7 +494,7 @@ h1 {
   inset: 1px;
   display: flex;
   overflow: hidden;
-  background: repeating-linear-gradient(90deg, #242424 0 52px, #191919 52px 104px);
+  background: repeating-linear-gradient(90deg, #252422 0 52px, #1a1918 52px 104px);
 }
 
 .strip img {
@@ -491,9 +527,11 @@ h1 {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid var(--ink);
-  border-right: 1px solid var(--ink);
-  background: rgb(255 255 255 / 0.05);
+  border-left: 1px solid var(--accent);
+  border-right: 1px solid var(--accent);
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  background: rgb(255 212 0 / 0.06);
   cursor: grab; /* drag the selection to move it */
   z-index: 2;
 }
@@ -520,8 +558,8 @@ h1 {
   width: 6px;
   height: 100%;
   border-radius: 3px;
-  background: var(--ink);
-  opacity: 0.85;
+  background: var(--accent);
+  opacity: 0.9;
 }
 
 .handle:hover::before,
@@ -546,7 +584,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem 1rem;
+  gap: 0.4rem 0.75rem;
   width: 100%;
   max-width: var(--stage-max);
   margin: var(--deck-gap) auto 0;
@@ -558,8 +596,10 @@ h1 {
 }
 
 .selection .name {
-  font-weight: 600;
-  min-width: 4.5em;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin-right: 0.25rem;
 }
 
 .selection label {
@@ -584,7 +624,7 @@ input.timecode {
 
 input.timecode:focus-visible {
   outline-offset: 0;
-  border-color: var(--ink);
+  border-color: var(--accent);
 }
 
 /* settings panel */
@@ -607,8 +647,10 @@ input.timecode:focus-visible {
 
 .field label {
   display: block;
-  font-weight: 600;
-  margin-bottom: 0.4rem;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
 }
 
 select {
@@ -649,6 +691,10 @@ summary {
   font-weight: 600;
 }
 
+summary:hover {
+  color: var(--accent);
+}
+
 details p {
   color: var(--muted);
   font-size: 0.9rem;
@@ -679,9 +725,9 @@ details thead th {
   color: var(--muted);
 }
 
-/* a changed value is bold ink, the loudest this theme gets */
+/* a changed value is bold and yellow */
 details td.changed {
-  color: var(--ink);
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -755,23 +801,26 @@ pre .esc {
   overflow: auto;
 }
 
+/* the website's playhead bar */
 .bar {
   height: 6px;
-  border-radius: 3px;
-  background: var(--raised);
+  border-radius: 999px;
+  background: var(--line);
   overflow: hidden;
   margin-bottom: 0.6rem;
 }
 
 .bar .fill {
   height: 100%;
-  background: var(--ink);
+  border-radius: 999px;
+  background: var(--accent);
   transition: width 0.25s ease;
 }
 
 .percent {
   margin: 1.2rem 0 0.2rem;
   min-height: 1.2em;
+  font-family: var(--display);
   font-size: 1.6rem;
   line-height: 1.2;
 }
@@ -842,11 +891,12 @@ pre .esc {
   z-index: 30;
   display: grid;
   place-items: center;
-  background: rgb(0 0 0 / 0.9);
-  color: #ffffff;
+  background: rgb(11 11 11 / 0.92);
+  color: var(--accent);
+  font-family: var(--display);
   font-size: 1.9rem;
-  font-weight: 700;
-  outline: 2px dashed #ffffff;
+  text-transform: uppercase;
+  outline: 2px dashed var(--accent);
   outline-offset: -24px;
   pointer-events: none;
 }

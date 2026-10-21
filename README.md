@@ -97,4 +97,5 @@ keeping the original.
 ## License
 
 [MIT](LICENSE). The downloads include ffmpeg, which is licensed under the
-[GPL](https://ffmpeg.org/legal.html).
+[GPL](https://ffmpeg.org/legal.html). The interface uses the Archivo Black font, licensed under the
+[SIL Open Font License](src/renderer/fonts/OFL.txt).
