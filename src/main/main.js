@@ -46,10 +46,10 @@ app.whenReady().then(async () => {
   if (app.isPackaged) Menu.setApplicationMenu(null); // keeps Reload and DevTools while developing
 
   win = new BrowserWindow({
-    width: 1100,
+    width: 1200,
     height: 760,
     title: "snip",
-    backgroundColor: "#0a0a0a", // the page's --bg, so the window doesn't flash white before it loads
+    backgroundColor: "#0b0b0b", // the page's --bg, so the window doesn't flash white before it loads
     webPreferences: { preload: path.join(here, "..", "preload", "index.cjs") },
   });
   // the page never leaves snip://; a dropped file must not replace it either
