@@ -1,11 +1,26 @@
+# Dependencies
 node_modules/
 
-# the old Go build
-/snip
-
-# electron-builder output, and the ffmpeg the release workflow bundles
+# Build output
+out/
 dist/
 ffmpeg/
+*.tsbuildinfo
 
-# Env
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment
 .env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

@@ -1,7 +1,7 @@
 # How npm run dist and the release workflow package snip.
 # Reference: https://www.electron.build/configuration
 
-appId: io.github.mhdcodes.snip
+appId: codes.mhd.snip
 
 # The newer AppImage toolset, still marked beta. Its runtime needs no libfuse2, and its
 # launcher turns Chromium's sandbox off where the system blocks it, as Ubuntu 24.04 does;
