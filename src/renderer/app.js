@@ -25,12 +25,60 @@ function show(view) {
     editor.close();
     editor = null;
   }
+  if (view !== "done") clearResult();
   window.scrollTo({ top: 0 });
 }
 
-function showStart() {
-  show("start");
+// clearResult removes the finished conversion's preview. A hidden player would keep
+// playing, and keep the result file open after it is deleted.
+function clearResult() {
+  for (const media of $("result").querySelectorAll("video, audio")) {
+    media.pause();
+    media.removeAttribute("src");
+    media.load();
+  }
+  $("result").replaceChildren();
+}
+
+// DEFAULT_VIDEO is the quality a video starts with, until the user picks another.
+const DEFAULT_VIDEO = "crf_1080p";
+const PLAY_BUTTON = $("play").innerHTML; // the editor replaces it while playing
+
+// showEmpty is the first screen: the editor without a video. The stage asks for one,
+// and the timeline and settings wait, locked, showing what a video starts with.
+function showEmpty() {
+  show("convert");
+  if (editor) {
+    editor.close();
+    editor = null;
+  }
   document.title = "snip";
+  $("convert").classList.add("no-video");
+  $("convert-title").textContent = "Convert a video";
+
+  // the editor sized the stage to its video
+  $("stage").style.removeProperty("aspect-ratio");
+  $("stage").style.removeProperty("width");
+  $("play").innerHTML = PLAY_BUTTON;
+  $("play").disabled = $("snap").disabled = true;
+  $("strip").innerHTML = "";
+  $("cut").innerHTML = "";
+  $("selection").innerHTML = '<span class="name">Selection</span>';
+  for (const label of ["Start", "Length", "End"]) {
+    $("selection").insertAdjacentHTML(
+      "beforeend",
+      `<label>${label} <input class="timecode" placeholder="-:--.--" disabled /></label>`,
+    );
+  }
+
+  $("settings-fields").disabled = true;
+  const preset = remembered("video.preset") || DEFAULT_VIDEO;
+  $("video-select").replaceChildren(new Option(PRESET_NAMES[preset] ?? PRESET_NAMES[DEFAULT_VIDEO]));
+  $("audio-select").replaceChildren(new Option(PRESET_NAMES.bitrate_high));
+  $("audio-field").hidden = false;
+  $("plan-error").textContent = "";
+  $("details-table").innerHTML = "";
+  $("commands").innerHTML = "";
 }
 
 // openVideo switches to the video that pick resolves to: one from the open dialog or a
@@ -44,9 +92,10 @@ async function openVideo(pick) {
     showBroken(String(error.message ?? error));
     return;
   }
-  if (!opened) return;
-  if (video) api.deleteVideo(video.id).catch(() => {});
+  if (!opened) return; // cancelled: stay with the current video, if any
+  if (video) api.deleteVideo(video.id).catch(() => {}); // also deletes its conversions
   video = opened;
+  job = null;
   currentPlan = null;
 
   settings = {
@@ -54,7 +103,7 @@ async function openVideo(pick) {
       cut: { start: 0, duration: Math.min(video.metadata.container.duration, 60) },
       crop: { top: 0, right: 0, bottom: 0, left: 0 },
     },
-    video: remembered("video.preset") || "size_8mb",
+    video: remembered("video.preset") || DEFAULT_VIDEO,
     audio: "bitrate_high",
   };
 
@@ -117,15 +166,43 @@ function showBroken(message) {
 function showConvert() {
   show("convert");
   if (editor) editor.close();
+  $("convert").classList.remove("no-video");
+  $("settings-fields").disabled = false;
+  $("play").disabled = $("snap").disabled = false;
   document.title = video.name;
   $("convert-title").textContent = `Convert ${video.name}`;
 
-  editor = openEditor(video, settings.modification, (modification, done) => {
-    settings.modification = modification;
-    if (done) refreshPlan();
-  });
+  editor = openEditor(
+    video,
+    settings.modification,
+    (modification, done) => {
+      settings.modification = modification;
+      if (done) refreshPlan();
+    },
+    saveFrame,
+  );
   if (currentPlan) drawSettings(currentPlan);
   refreshPlan();
+}
+
+async function saveFrame(time, crop) {
+  try {
+    const path = await api.saveFrame(video.id, time, crop);
+    if (path) toast(`Saved ${path}`);
+  } catch (error) {
+    toast(String(error.message ?? error), true);
+  }
+}
+
+// toast shows a short message over the preview.
+let toastTimer = 0;
+function toast(text, bad = false) {
+  const box = $("toast");
+  box.textContent = text;
+  box.classList.toggle("bad", bad);
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (box.hidden = true), 4000);
 }
 
 function refreshPlan() {
@@ -160,6 +237,7 @@ function drawSettings(plan) {
   const chosenVideo = plan.instructions.video;
   const chosenAudio = plan.instructions.audio;
   const isGif = chosenVideo.codec.startsWith("gif");
+  const isAudioOnly = chosenVideo.codec === "none";
 
   // quality, grouped like the presets are meant
   const groups = [
@@ -191,6 +269,7 @@ function drawSettings(plan) {
 
   $("convert-button").disabled = chosenVideo.implausible || chosenAudio.implausible;
   editor?.setMuted(chosenAudio.codec === "none");
+  editor?.setCropping(!isAudioOnly); // there is no picture to crop
 
   drawDetails(video.metadata, plan.target);
   drawCommands(plan);
@@ -204,6 +283,7 @@ const PRESET_NAMES = {
   crf_720p: "HD resolution (for sharing online)",
   crf_1080p: "Best quality (for YouTube and similar)",
   gif_600p: "Animated GIF",
+  audio_only: "Audio only (M4A)",
   none: "No audio",
   bitrate_low: "Low quality (speech and sound effects)",
   bitrate_high: "High quality",
@@ -222,6 +302,7 @@ function videoDetail(v) {
       `Too long for this size: only ${bitrate} kbit/s would be left. Shorten the selection or pick a bigger size.`,
       "bad",
     ];
+  if (v.codec === "none") return ["Drops the picture and keeps the sound, as an M4A file", ""];
   if (v.original) return [`Keeps the original ${size} stream at ~${bitrate} kbit/s`, "good"];
   if (v.preset.startsWith("crf")) return [`${size} at ${num(v.fps)} fps, CRF ${v.crf}`, ""];
   if (v.preset.startsWith("gif")) return [`${size} at ${num(v.fps)} fps`, ""];
@@ -250,17 +331,19 @@ $("audio-select").onchange = (event) => {
 
 function drawDetails(source, target) {
   const kbit = (value) => (value > 0 ? `~${num(value, 0)} kbit/s` : "unknown");
+  const noPicture = target.video.codec === "none";
+  const pic = (text) => (noPicture ? "–" : text);
   const rows = [
     ["Duration", `${num(source.container.duration, 2, 2)} s`, `${num(target.container.duration, 2, 2)} s`],
     ["Video"],
     ["Codec", source.video.codec, target.video.codec],
-    ["Resolution", `${source.video.width}×${source.video.height}`, `${target.video.width}×${target.video.height}`],
-    ["Frame rate", `${num(source.video.fps)} fps`, `${num(target.video.fps)} fps`],
-    ["Color format", source.video.color, target.video.color],
+    ["Resolution", `${source.video.width}×${source.video.height}`, pic(`${target.video.width}×${target.video.height}`)],
+    ["Frame rate", `${num(source.video.fps)} fps`, pic(`${num(target.video.fps)} fps`)],
+    ["Color format", source.video.color, pic(target.video.color)],
     [
       "Bitrate",
       kbit(source.video.bitrate),
-      target.video.crf ? `< ${num(estimateBitrate(target.video), 0)} kbit/s` : kbit(target.video.bitrate),
+      pic(target.video.crf ? `< ${num(estimateBitrate(target.video), 0)} kbit/s` : kbit(target.video.bitrate)),
     ],
   ];
   if (source.audio.codec !== "none") {
@@ -377,21 +460,23 @@ function showDone(state) {
   show("done");
   const url = api.resultURL(state.id);
   const result = $("result");
-  result.innerHTML = "";
+  clearResult();
   const isImage = state.type.startsWith("image/");
-  const preview = document.createElement(isImage ? "img" : "video");
+  const isAudio = state.type.startsWith("audio/");
+  const preview = document.createElement(isImage ? "img" : isAudio ? "audio" : "video");
   preview.src = url;
   if (isImage) {
     preview.alt = state.fileName;
   } else {
     preview.controls = true;
     preview.autoplay = true;
-    preview.playsInline = true;
+    if (!isAudio) preview.playsInline = true;
   }
   result.append(preview);
 
   $("done-title").textContent = `Finished: ${state.fileName}`;
-  $("save-button").textContent = `Save ${isImage ? "GIF" : "video"} (${num(Math.ceil(state.size / 1000))} kB)`;
+  $("save-button").textContent =
+    `Save ${isImage ? "GIF" : isAudio ? "audio" : "video"} (${num(Math.ceil(state.size / 1000))} kB)`;
   document.title = state.fileName;
   $("saved").hidden = true;
   $("save-button").onclick = async () => {
@@ -414,12 +499,15 @@ function showDone(state) {
 
 document.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
-  if (action === "change") {
+  // pick another video straight away; the current one stays until it is replaced
+  if (action === "change") openVideo(api.openVideo);
+  // stop working on the video and go back to the empty editor
+  if (action === "close") {
     if (video) api.deleteVideo(video.id).catch(() => {});
     video = null;
     job = null;
     currentPlan = null;
-    showStart();
+    showEmpty();
   }
   if (action === "retry") {
     if (job) api.cancelJob(job.id).catch(() => {}); // also deletes the old result
@@ -435,7 +523,7 @@ $("open-button").onclick = () => openVideo(api.openVideo);
 // The app-wide keys; the editor handles its own, see editor.js. All are listed in the
 // shortcuts dialog. Mod is Cmd on a Mac and Ctrl elsewhere.
 const isMac = /Mac/.test(navigator.platform);
-for (const key of document.querySelectorAll("#keys .mod")) key.textContent = isMac ? "⌘" : "Ctrl";
+for (const key of document.querySelectorAll(".mod")) key.textContent = isMac ? "⌘" : "Ctrl";
 
 document.addEventListener("keydown", (event) => {
   const mod = isMac ? event.metaKey : event.ctrlKey && !event.altKey;
@@ -511,4 +599,4 @@ function remembered(key) {
   }
 }
 
-showStart();
+showEmpty();

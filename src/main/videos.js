@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { baseName, build } from "./media/commands.js";
+import { baseName, build, frameArgs } from "./media/commands.js";
 import { clean, target } from "./media/format.js";
 import { choose } from "./media/presets.js";
 import { probe } from "./media/probe.js";
@@ -111,12 +111,35 @@ export class Videos {
     const dir = path.join(v.dir, "thumbs");
     let finished = false;
     v.thumbs.finally(() => (finished = true));
-    const deadline = Date.now() + 30_000;
+    // wait as long as ffmpeg runs, not for a fixed time: on a slow drive, or when every
+    // frame has to be decoded, the next thumbnail can take a long while
     while (!finished && !existsSync(thumbPath(dir, n + 1))) {
-      if (Date.now() > deadline || !this.videos.has(id)) return null;
+      if (!this.videos.has(id)) return null;
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
     return existsSync(thumbPath(dir, n)) ? thumbPath(dir, n) : null;
+  }
+
+  // saveFrame saves the frame at time, cropped by crop, as a PNG. chooseFile(name) asks
+  // where to put it and resolves to a path, or "" to cancel. Resolves to that path.
+  async saveFrame(id, time, crop, chooseFile) {
+    const v = this.video(id);
+    const { duration } = v.meta.container;
+    const at = Math.min(Math.max(Number(time) || 0, 0), Math.max(duration - 1 / v.meta.video.fps, 0)); // past the last frame, ffmpeg writes nothing
+    const { crop: c } = clean({ cut: { start: 0, duration }, crop }, v.meta);
+    const target = await chooseFile(`${v.base} ${frameStamp(at)}.png`);
+    if (!target) return "";
+
+    const file = path.join(v.dir, `frame-${randomBytes(6).toString("hex")}.png`);
+    try {
+      await run([{ args: frameArgs(v.meta, at, c, v.path, file) }], 1, () => {}, v.controller.signal);
+      await fs.copyFile(file, target).catch((error) => {
+        throw new Error(error.code === "ENOENT" ? "ffmpeg wrote no frame" : error.message, { cause: error });
+      });
+    } finally {
+      await fs.rm(file, { force: true });
+    }
+    return target;
   }
 
   // plan shows what a conversion with the page's settings { modification, video, audio }
@@ -228,4 +251,14 @@ export class Videos {
     const mod = clean(settings?.modification, v.meta);
     return choose(v.meta, mod, this.encoders, settings?.video, settings?.audio);
   }
+}
+
+// frameStamp writes a time for a file name, like 1-05.30 or 1-02-03.00: no colons, which
+// Windows doesn't allow.
+function frameStamp(seconds) {
+  const total = Math.round(seconds * 100);
+  const h = Math.floor(total / 360000);
+  const m = Math.floor((total % 360000) / 6000);
+  const rest = ((total % 6000) / 100).toFixed(2).padStart(5, "0");
+  return h > 0 ? `${h}-${String(m).padStart(2, "0")}-${rest}` : `${m}-${rest}`;
 }

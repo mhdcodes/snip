@@ -11,6 +11,10 @@ export const copyText = (text) => snip.copyText(text);
 // pathForFile is the path of a dropped file, or "" when it isn't one on disk.
 export const pathForFile = (file) => snip.pathForFile(file);
 
+// saveFrame asks where to save the frame at time, cropped by crop, and saves it as a PNG.
+// It resolves to the saved path, or "" when cancelled.
+export const saveFrame = (id, time, crop) => snip.saveFrame(id, time, crop);
+
 export const deleteVideo = (id) => snip.deleteVideo(id);
 
 // makePreview resolves once the video has a copy the page can play, see sourceURL.

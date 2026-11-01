@@ -29,7 +29,7 @@ export function formatCommand(args) {
   const lines = ["ffmpeg"];
   const last = args.length - 1; // the output file gets its own line
   for (let i = 0; i <= last; i++) {
-    const hasValue = args[i].startsWith("-") && i + 1 < last && !args[i + 1].startsWith("-");
+    const hasValue = args[i].startsWith("-") && i + 1 < last && !/^-\D/.test(args[i + 1]); // -1 is a value
     if (hasValue) {
       lines.push(args[i] + " " + shellQuote(args[i + 1]));
       i++;

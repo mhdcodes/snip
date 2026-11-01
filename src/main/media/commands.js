@@ -16,6 +16,21 @@ import { estimateH264Size } from "./presets.js";
 export function build(source, ins, paths, encoders) {
   const out = (ext) => path.join(paths.dir ?? "", paths.name + ext);
 
+  if (ins.video.codec === "none") {
+    // only the sound, in an m4a file. The first audio track is the one ffprobe described.
+    if (!ins.audio.codec.startsWith("aac")) throw new Error(`unsupported audio codec: ${ins.audio.codec}`);
+    const file = out(".clip.m4a");
+    // prettier-ignore
+    const args = [
+      ...inputArgs(source, ins, paths),
+      "-map", "0:a:0", "-map_chapters", "-1", "-vn", "-sn", "-dn", // m4a stores chapters as a data track
+      ...aacArgs(ins, encoders),
+      "-f", "ipod", "-movflags", "+faststart", // ipod is ffmpeg's name for m4a
+      file,
+    ];
+    return [{ args, file, type: "audio/mp4" }];
+  }
+
   if (ins.video.codec.startsWith("h264")) {
     const args = [...inputArgs(source, ins, paths), "-sn", "-dn", ...h264Args(source, ins)]; // mp4 can't hold most subtitle and data streams
     if (ins.audio.codec === "none") {
@@ -77,19 +92,26 @@ function inputArgs(source, ins, paths) {
   return [...args, "-i", paths.input];
 }
 
+// frameArgs saves the frame shown at time as a PNG, cropped like the video.
+export function frameArgs(source, time, crop, input, file) {
+  const filters = cropIsZero(crop) ? [] : ["-vf", cropFilter(source, crop)];
+  // before -i, -ss jumps to the keyframe before time and decodes up to the exact frame
+  return ["-ss", secs(time), "-i", input, "-map", "0:v:0", ...filters, "-frames:v", "1", "-update", "1", file];
+}
+
 function cropScaleFilters(source, ins) {
-  // ffmpeg applies the display rotation before the filters, so crop and scale work on the
-  // video as it is displayed
   const filters = [];
   const c = ins.modification.crop;
-  if (!cropIsZero(c)) {
-    const { width: w, height: h } = source.video;
-    filters.push(
-      `crop=${Math.round(w * (1 - c.left - c.right))}:${Math.round(h * (1 - c.top - c.bottom))}:${Math.round(w * c.left)}:${Math.round(h * c.top)}`,
-    );
-  }
+  if (!cropIsZero(c)) filters.push(cropFilter(source, c));
   filters.push(`scale=${Math.trunc(ins.video.width)}:${Math.trunc(ins.video.height)}:flags=bilinear`);
   return filters;
+}
+
+// cropFilter removes the crop's fractions of the frame. ffmpeg applies the display rotation
+// before the filters, so it works on the video as it is displayed.
+function cropFilter(source, c) {
+  const { width: w, height: h } = source.video;
+  return `crop=${Math.round(w * (1 - c.left - c.right))}:${Math.round(h * (1 - c.top - c.bottom))}:${Math.round(w * c.left)}:${Math.round(h * c.top)}`;
 }
 
 function h264Args(source, ins) {

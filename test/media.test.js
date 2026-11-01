@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
-import { baseName, build, num } from "../src/main/media/commands.js";
+import { baseName, build, frameArgs, num } from "../src/main/media/commands.js";
 import { clean, cropIsZero } from "../src/main/media/format.js";
 import { DEFAULT_FPS, parseProbe } from "../src/main/media/probe.js";
 import { audioFormats, choose, fitResolution, videoFormats } from "../src/main/media/presets.js";
@@ -72,7 +72,7 @@ test("choose drops the audio for a GIF and falls back to the defaults", () => {
   const mod = { cut: { start: 0, duration: 5 }, crop: noCrop };
   assert.equal(choose(src, mod, {}, "gif_600p", "bitrate_high").instructions.audio.codec, "none");
   const { video, audio } = choose(src, mod, {}, "does-not-exist", "").instructions;
-  assert.equal(`${video.preset}/${audio.preset}`, "size_8mb/bitrate_high");
+  assert.equal(`${video.preset}/${audio.preset}`, "crf_1080p/bitrate_high");
 });
 
 test("the low audio preset depends on the encoder", () => {
@@ -110,6 +110,46 @@ test("a GIF takes two passes", () => {
     [path.join("/tmp/x", "in.palette.png"), path.join("/tmp/x", "in.clip.gif")],
   );
   assert.ok(!cmds[0].args.includes("-ss"), `full length cut should not seek: ${cmds[0].args}`);
+});
+
+test("audio only keeps the sound in an m4a", () => {
+  const src = source(1920, 1080, 30, 60, 8000);
+  const mod = { cut: { start: 5, duration: 10 }, crop: noCrop };
+  const { instructions, audioFormats: audios } = choose(src, mod, {}, "audio_only", "none");
+  assert.equal(instructions.video.codec, "none");
+  assert.equal(instructions.audio.preset, "bitrate_high", "no audio makes no sense without a picture");
+  assert.ok(!audios.some((a) => a.codec === "none"));
+
+  const [cmd] = build(src, instructions, { input: "in.mp4", name: "in" }, {});
+  assert.equal(`${cmd.file} ${cmd.type}`, "in.clip.m4a audio/mp4");
+  const args = cmd.args.join(" ");
+  for (const want of ["-ss 5.000 -t 10.000 -i in.mp4", "-map 0:a:0 -map_chapters -1 -vn", "-c:a copy", "-f ipod"]) {
+    assert.ok(args.includes(want), `args missing ${want}:\n${args}`);
+  }
+
+  const silent = { ...src, audio: { codec: "none", sampleRate: 0, channelSetup: "none", bitrate: 0 } };
+  const chosen = choose(silent, mod, {}, "audio_only", "");
+  assert.ok(!chosen.videoFormats.some((f) => f.preset === "audio_only"), "a silent video can't be audio only");
+  assert.equal(chosen.instructions.video.preset, "crf_1080p");
+});
+
+test("frameArgs seeks and crops", () => {
+  const src = source(1920, 1080, 30, 60, 8000);
+  assert.deepEqual(frameArgs(src, 12.5, noCrop, "in.mp4", "out.png"), [
+    "-ss",
+    "12.500",
+    "-i",
+    "in.mp4",
+    "-map",
+    "0:v:0",
+    "-frames:v",
+    "1",
+    "-update",
+    "1",
+    "out.png",
+  ]);
+  const args = frameArgs(src, 0, { ...noCrop, left: 0.25, right: 0.25 }, "in.mp4", "out.png").join(" ");
+  assert.ok(args.includes("-vf crop=960:1080:480:0"), args);
 });
 
 test("clean trims and checks the modification", () => {

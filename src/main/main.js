@@ -137,6 +137,16 @@ function handleIPC() {
     await fs.copyFile(file, filePath);
     return filePath;
   });
+  handle("save-frame", (id, time, crop) =>
+    videos.saveFrame(id, time, crop, async (name) => {
+      const { canceled, filePath } = await dialog.showSaveDialog(win, {
+        title: "Save frame",
+        defaultPath: path.join(dir, name),
+        filters: [{ name: "PNG image", extensions: ["png"] }],
+      });
+      return canceled ? "" : (filePath ?? "");
+    }),
+  );
   handle("copy-text", (text) => clipboard.writeText(String(text)));
 }
 

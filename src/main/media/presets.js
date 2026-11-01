@@ -195,11 +195,27 @@ export function estimateH264Size(width, height, fps, crf, length) {
   return Math.floor((width * height * length * Math.log2(fps)) / 20 / (crf * crf));
 }
 
+// AUDIO_ONLY is the video "preset" that drops the picture and keeps only the sound.
+export const AUDIO_ONLY = Object.freeze({
+  preset: "audio_only",
+  codec: "none",
+  color: "",
+  width: 0,
+  height: 0,
+  rotation: 0,
+  fps: 0,
+  bitrate: 0,
+});
+
 // choose picks the presets the user asked for, falling back to the defaults. It returns
 // the instructions { modification, video, audio } and the presets to choose from.
-// GIFs have no audio, so the audio is dropped for them.
+// GIFs have no audio, so the audio is dropped for them; audio only is offered when the
+// source has sound.
 export function choose(source, mod, encoders, videoPreset, audioPreset) {
-  const audios = audioFormats(source, encoders);
+  const hasAudio = source.audio.codec !== "none";
+  let audios = audioFormats(source, encoders);
+  // keeping only the sound needs some sound
+  if (hasAudio && videoPreset === AUDIO_ONLY.preset) audios = audios.filter((a) => a.codec !== "none");
   let audio = pick(audios, audioPreset, "bitrate_high");
 
   const videos = videoFormats({
@@ -207,7 +223,8 @@ export function choose(source, mod, encoders, videoPreset, audioPreset) {
     video: croppedVideo(mod, source.video),
     audio, // size targets leave room for the audio
   });
-  const video = pick(videos, videoPreset, "size_8mb");
+  if (hasAudio) videos.push(AUDIO_ONLY);
+  const video = pick(videos, videoPreset, "crf_1080p");
   if (video.codec.startsWith("gif")) audio = NO_AUDIO;
 
   return { instructions: { modification: mod, video, audio }, videoFormats: videos, audioFormats: audios };

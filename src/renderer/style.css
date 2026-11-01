@@ -152,7 +152,7 @@ a {
   color: var(--on-accent);
 }
 
-.btn.primary:hover:not([disabled]) {
+.btn.primary:hover:not(:disabled) {
   background: var(--ink);
   border-color: var(--ink);
 }
@@ -163,17 +163,17 @@ a {
   border-color: var(--line-strong);
 }
 
-.btn.ghost:hover:not([disabled]) {
+.btn.ghost:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.btn[disabled] {
+.btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.btn[disabled]:active {
+.btn:disabled:active {
   transform: none;
 }
 
@@ -201,35 +201,7 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-/* start page: the hero sits centered in the window */
-.start {
-  display: grid;
-  align-content: safe center;
-}
-
-.hero {
-  padding: clamp(2rem, 6vw, 4rem) 16px;
-}
-
-.hero-inner {
-  max-width: 44rem;
-  margin: 0 auto;
-}
-
-.hero h1 {
-  font-size: clamp(2.6rem, 1.5rem + 5.5vw, 5rem);
-  line-height: 0.9;
-  letter-spacing: -0.025em;
-  margin-bottom: 0.4em;
-}
-
-.lede {
-  font-size: 1.2rem;
-  color: var(--muted);
-  max-width: 33rem;
-  margin: 0 0 2rem;
-}
-
+/* Select video and its keyboard hint */
 .pick {
   display: flex;
   flex-wrap: wrap;
@@ -246,13 +218,6 @@ h1 {
 .pick-hint {
   color: var(--muted);
   font: 0.85rem var(--mono);
-}
-
-.privacy {
-  margin: 2rem 0 0;
-  max-width: 33rem;
-  font-size: 0.92rem;
-  color: var(--muted);
 }
 
 /* convert page */
@@ -439,6 +404,33 @@ h1 {
   font: 700 0.78rem var(--mono);
   pointer-events: none;
   z-index: 2;
+}
+
+/* a short message over the preview, like where a frame was saved */
+.toast {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  max-width: calc(100% - 16px);
+  margin: 0;
+  padding: 0.35em 0.8em;
+  border-radius: var(--radius);
+  background: rgb(11 11 11 / 0.85);
+  color: var(--ink);
+  font: 600 0.75rem var(--mono);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.toast.bad {
+  color: var(--bad);
+}
+
+/* audio only: nothing to crop */
+.stage.no-crop .crop,
+.stage.no-crop .aspects {
+  display: none;
 }
 
 /* the deck: play key + film */
@@ -698,6 +690,20 @@ input.timecode:focus-visible {
   margin: 0 0 var(--field-gap);
 }
 
+/* the settings are one fieldset, so they lock together while there is no video */
+#settings-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.privacy {
+  margin: 2rem 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
 .field label {
   display: block;
   font-family: var(--display);
@@ -911,6 +917,14 @@ pre .esc {
   object-fit: contain;
 }
 
+.result audio {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(90%, 40rem);
+  transform: translate(-50%, -50%);
+}
+
 .result-bar {
   flex: none;
   width: 100%;
@@ -960,6 +974,153 @@ pre .esc {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ---------- the convert screen without a video: snip's first screen ----------
+   The stage asks for a video; the timeline and settings wait, locked, in the quiet
+   tokens. app.js adds .no-video, see showEmpty. */
+
+.pick-video,
+.unlock,
+.privacy {
+  display: none;
+}
+
+.no-video .stage {
+  background: var(--block);
+  border: 2px dashed var(--line-strong);
+}
+
+/* only the request for a video: no player, crop box, time stamp or messages */
+.no-video .stage > :not(.pick-video) {
+  display: none;
+}
+
+.no-video .pick-video {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.pick-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.8rem, 0.9rem + 3.4cqw, 3rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.pick-lede {
+  margin: -0.25rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.pick-video .pick {
+  justify-content: center;
+}
+
+.pick-note {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* hatching instead of the loading stripes: there is no video yet, not a slow one */
+.no-video .lane {
+  display: none;
+}
+
+.no-video .film {
+  background: var(--block);
+}
+
+.no-video .strip {
+  background: repeating-linear-gradient(-45deg, var(--block) 0 14px, var(--bg) 14px 28px);
+}
+
+.play:disabled,
+.play:disabled:hover {
+  border-color: var(--line);
+  color: var(--line-strong);
+  cursor: not-allowed;
+}
+
+.no-video .selection .name,
+.no-video .selection label,
+.no-video .selection input::placeholder {
+  color: var(--line-strong);
+}
+
+.no-video .selection input {
+  background: var(--bg);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
+.no-video .field label {
+  color: var(--muted);
+}
+
+.no-video select {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--line-strong);
+  opacity: 1; /* Chromium dims disabled selects itself */
+  cursor: not-allowed;
+}
+
+/* the explanations under the selects and the plan's error come with a video */
+.no-video .field .detail,
+.no-video #plan-error,
+.no-video .btn.change,
+.no-video details > :not(summary, .unlock) {
+  display: none;
+}
+
+.no-video .unlock,
+.no-video .privacy {
+  display: block;
+}
+
+.no-video .detail.unlock {
+  margin: 0 0 1.5rem;
+}
+
+@media (min-width: 1000px) {
+  .no-video .panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* pinned to the bottom */
+  .no-video .panel details {
+    margin-top: auto;
+  }
+
+  .no-video .privacy {
+    margin-bottom: 2.5rem;
+  }
+}
+
+/* stacked columns: flex: 1 would shrink the stage box to its minimum, since the
+   column has no height to share, and a 16:9 stage is too short for its words */
+@media (max-width: 999px) {
+  .no-video .stage-box {
+    flex: none;
+  }
+
+  .no-video .stage {
+    aspect-ratio: 4 / 3;
   }
 }
 

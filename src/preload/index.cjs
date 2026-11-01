@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("snip", {
   startJob: (id, settings) => call("start-job", id, settings),
   cancelJob: (id) => call("cancel-job", id),
   saveResult: (jobID) => call("save-result", jobID),
+  saveFrame: (id, time, crop) => call("save-frame", id, time, crop),
   copyText: (text) => call("copy-text", text),
   pathForFile: (file) => webUtils.getPathForFile(file),
   onJob: (callback) => listen("job", callback),

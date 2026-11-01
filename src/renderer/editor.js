@@ -16,8 +16,9 @@ const $ = (id) => document.getElementById(id);
 
 // openEditor wires up the convert screen for one video.
 // onChange(modification, done) is called on every edit; done is false while dragging.
-// It returns { setMuted, close }.
-export function openEditor(video, modification, onChange) {
+// onSaveFrame(time, crop) is called to save the frame under the playhead.
+// It returns { setMuted, setCropping, close }.
+export function openEditor(video, modification, onChange, onSaveFrame) {
   const meta = video.metadata;
   const duration = meta.container.duration;
   const frame = 1 / meta.video.fps;
@@ -59,10 +60,11 @@ export function openEditor(video, modification, onChange) {
   function showFallbackFrame() {
     if (canPlayVideo) return;
     const index = Math.min(Math.floor(cursor / video.thumbs.interval), thumbs.length - 1);
-    fallback.hidden = thumbs.length === 0;
-    $("preview-empty").hidden = thumbs.length > 0;
-    if (index >= 0 && fallback.src !== thumbs[index]) {
-      fallback.src = thumbs[index];
+    const still = thumbs[index] ?? thumbs.find(Boolean); // missing frames are null
+    fallback.hidden = !still;
+    $("preview-empty").hidden = Boolean(still);
+    if (still && fallback.src !== still) {
+      fallback.src = still;
     }
   }
 
@@ -162,6 +164,13 @@ export function openEditor(video, modification, onChange) {
   }
 
   $("play").onclick = togglePlay;
+  $("snap").onclick = saveFrame;
+
+  function saveFrame() {
+    paused = true;
+    syncPlayback();
+    onSaveFrame(cursor, mod.crop);
+  }
 
   // the playhead knob: drag it to scrub, or step it with the arrow keys
   const playhead = $("playhead");
@@ -214,6 +223,7 @@ export function openEditor(video, modification, onChange) {
     const actions = {
       " ": togglePlay,
       k: togglePlay,
+      s: saveFrame,
       j: () => stepCursor(-step),
       l: () => stepCursor(step),
       // a second press goes on to the edge of the video
@@ -474,6 +484,7 @@ export function openEditor(video, modification, onChange) {
   }
 
   // loadThumbs fetches the film strip frames one at a time, so they don't block other requests.
+  // A frame that doesn't arrive leaves a gap, so the ones after it still line up.
   async function loadThumbs() {
     const strip = $("strip");
     strip.innerHTML = "";
@@ -487,10 +498,18 @@ export function openEditor(video, modification, onChange) {
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
       });
-      if (!ok || closed) break;
+      if (closed) break;
+      if (!ok) {
+        const gap = document.createElement("span");
+        gap.style.width = width;
+        gap.style.flex = "none";
+        strip.append(gap);
+        thumbs.push(thumbs.at(-1) ?? null); // the fallback preview keeps showing the frame before
+        continue;
+      }
       strip.append(img);
       thumbs.push(img.src);
-      if (n === 1) player.poster = img.src;
+      if (!player.poster) player.poster = img.src;
       showFallbackFrame();
     }
   }
@@ -592,12 +611,17 @@ export function openEditor(video, modification, onChange) {
     setMuted(muted) {
       player.muted = muted;
     },
+    // setCropping hides the crop box for results without a picture
+    setCropping(on) {
+      stage.classList.toggle("no-crop", !on);
+    },
     close() {
       closed = true;
       paused = true;
       cancelAnimationFrame(frameRequest);
       frameRequest = 0;
       document.removeEventListener("keydown", onKey);
+      stage.classList.remove("no-crop");
       stage.removeEventListener("pointerdown", recordDown, true);
       player.pause();
       player.removeAttribute("src");

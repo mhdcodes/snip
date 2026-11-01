@@ -16,6 +16,7 @@ const TYPES = {
   ".webm": "video/webm",
   ".mkv": "video/x-matroska",
   ".ogv": "video/ogg",
+  ".m4a": "audio/mp4",
   ".gif": "image/gif",
   ".jpg": "image/jpeg",
   ".png": "image/png",

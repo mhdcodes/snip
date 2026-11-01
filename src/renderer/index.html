@@ -16,23 +16,6 @@
       app.js shows one at a time.
     -->
     <main id="app">
-      <!-- start: pick a file -->
-      <section data-view="start" class="start">
-        <div class="hero">
-          <div class="hero-inner">
-            <h1>Cut and compress videos</h1>
-            <p class="lede">Trim, crop and shrink a video until it fits Discord, WhatsApp or an email.</p>
-            <div class="pick">
-              <button type="button" id="open-button" class="btn primary">Select video</button>
-              <span class="pick-hint">or drop a video anywhere</span>
-            </div>
-            <p class="privacy">
-              Your video stays on this computer. snip runs ffmpeg locally and sends nothing to the internet.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <!-- broken: the file can't be read -->
       <section data-view="broken" class="page" hidden>
         <h1>This video can't be read</h1>
@@ -49,11 +32,12 @@
           The preview can't show this format, so snip makes a smaller copy to edit with. Converting still uses the
           original.
         </p>
-        <button type="button" class="btn ghost" data-action="change">Cancel</button>
+        <button type="button" class="btn ghost" data-action="close">Cancel</button>
       </section>
 
-      <!-- convert: timeline, crop and quality -->
-      <section data-view="convert" class="convert" hidden>
+      <!-- convert: timeline, crop and quality. Without a video (class "empty") it is the
+           first screen: the stage asks for a video and the rest waits, locked. -->
+      <section data-view="convert" id="convert" class="convert" hidden>
         <div class="bench">
           <div class="stage-box">
             <div id="stage" class="stage">
@@ -74,11 +58,23 @@
                 <button type="button" data-aspect="0.5625">9:16</button>
               </div>
               <span id="stamp" class="stamp mono"></span>
+              <div class="pick-video">
+                <p class="pick-title">Drop a video anywhere</p>
+                <p class="pick-lede">Drag it onto this window, or pick one from your computer.</p>
+                <div class="pick">
+                  <button type="button" id="open-button" class="btn primary">Select video</button>
+                  <span class="pick-hint"><kbd class="mod">Ctrl</kbd>+<kbd>O</kbd></span>
+                </div>
+                <p class="pick-note">Most video formats work.</p>
+              </div>
+              <p id="toast" class="toast" role="status" hidden></p>
             </div>
           </div>
 
           <div class="deck">
-            <button type="button" id="play" class="play"></button>
+            <button type="button" id="play" class="play" aria-label="Play">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+            </button>
             <div class="track">
               <div id="film" class="film">
                 <div id="strip" class="strip"></div>
@@ -91,6 +87,14 @@
                 </div>
               </div>
             </div>
+            <button type="button" id="snap" class="play" aria-label="Save frame" title="Save frame (S)">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill-rule="evenodd"
+                  d="M9 4 7.5 6H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-3.5L15 4zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"
+                />
+              </svg>
+            </button>
           </div>
           <div id="selection" class="selection"></div>
         </div>
@@ -98,26 +102,37 @@
         <form id="settings" class="panel">
           <h1 id="convert-title"></h1>
 
-          <div class="field">
-            <label for="video-select">Quality</label>
-            <select id="video-select"></select>
-            <p id="video-detail" class="detail"></p>
-          </div>
+          <fieldset id="settings-fields">
+            <div class="field">
+              <label for="video-select">Quality</label>
+              <select id="video-select"></select>
+              <p id="video-detail" class="detail"></p>
+            </div>
 
-          <div class="field" id="audio-field">
-            <label for="audio-select">Audio</label>
-            <select id="audio-select"></select>
-            <p id="audio-detail" class="detail"></p>
-          </div>
+            <div class="field" id="audio-field">
+              <label for="audio-select">Audio</label>
+              <select id="audio-select"></select>
+              <p id="audio-detail" class="detail"></p>
+            </div>
 
-          <div class="btn-row">
-            <button type="submit" id="convert-button" class="btn primary">Convert</button>
-            <button type="button" class="btn ghost" data-action="change">Select a different file</button>
-          </div>
-          <p id="plan-error" class="detail bad"></p>
+            <p class="detail unlock">Options unlock once a video is loaded.</p>
+
+            <div class="btn-row">
+              <button type="submit" id="convert-button" class="btn primary">Convert</button>
+              <button type="button" class="btn ghost change" data-action="change">Select a different file</button>
+            </div>
+            <p id="plan-error" class="detail bad"></p>
+          </fieldset>
+
+          <p class="privacy">
+            Your video stays on this computer. snip runs ffmpeg locally and sends nothing to the internet.
+          </p>
 
           <details>
             <summary>What happens to my video?</summary>
+            <p class="unlock">
+              Once a video is open, this shows how each property changes and which ffmpeg commands run.
+            </p>
             <p>How each property of the video changes:</p>
             <table id="details-table"></table>
             <p>snip runs these ffmpeg commands:</p>
@@ -171,6 +186,8 @@
         <dd>Play or pause</dd>
         <dt><kbd>J</kbd> <kbd>L</kbd></dt>
         <dd>One frame back or forward, with <kbd>Shift</kbd> one second</dd>
+        <dt><kbd>S</kbd></dt>
+        <dd>Save the frame under the playhead as an image</dd>
         <dt><kbd>Home</kbd> <kbd>End</kbd></dt>
         <dd>Go to the start or end of the selection, press again for the video's</dd>
         <dt><kbd>[</kbd> <kbd>]</kbd></dt>
