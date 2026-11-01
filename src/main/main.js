@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { serveFile } from "./files.js";
 import { detectEncoders } from "./media/probe.js";
 import { Videos } from "./videos.js";
 
@@ -78,10 +79,8 @@ async function serve(request) {
   try {
     if (parts[0] === "api") {
       const file = await mediaFile(parts.slice(1), url.searchParams);
-      // net.fetch answers range requests, so the player can seek
-      return file
-        ? net.fetch(pathToFileURL(file).href, { headers: request.headers })
-        : new Response("not found", { status: 404 });
+      // serveFile answers range requests, so the player can seek
+      return file ? serveFile(file, request) : new Response("not found", { status: 404 });
     }
     const file = path.join(pageDir, ...parts.map(decodeURIComponent));
     if (!file.startsWith(pageDir + path.sep)) return new Response("not found", { status: 404 });
