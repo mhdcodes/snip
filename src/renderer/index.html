@@ -79,10 +79,17 @@
 
           <div class="deck">
             <button type="button" id="play" class="play"></button>
-            <div id="film" class="film">
-              <div id="strip" class="strip"></div>
-              <div id="cut"></div>
-              <div id="cursor" class="cursor"></div>
+            <div class="track">
+              <div id="film" class="film">
+                <div id="strip" class="strip"></div>
+                <div id="cut"></div>
+              </div>
+              <!-- outside the film, which clips: the knob sits above it -->
+              <div class="lane">
+                <div id="cursor" class="cursor">
+                  <div id="playhead" class="playhead" tabindex="0" role="slider" aria-label="Playhead"></div>
+                </div>
+              </div>
             </div>
           </div>
           <div id="selection" class="selection"></div>
@@ -155,5 +162,29 @@
     </main>
 
     <div id="drop" class="drop" hidden><span>Drop video here</span></div>
+
+    <!-- opened with ?, see app.js. Mod is Ctrl, or ⌘ on a Mac. -->
+    <dialog id="keys" class="keys" aria-labelledby="keys-title">
+      <h2 id="keys-title">Keyboard shortcuts</h2>
+      <dl>
+        <dt><kbd>Space</kbd> <kbd>K</kbd></dt>
+        <dd>Play or pause</dd>
+        <dt><kbd>J</kbd> <kbd>L</kbd></dt>
+        <dd>One frame back or forward, with <kbd>Shift</kbd> one second</dd>
+        <dt><kbd>Home</kbd> <kbd>End</kbd></dt>
+        <dd>Go to the start or end of the selection, press again for the video's</dd>
+        <dt><kbd>[</kbd> <kbd>]</kbd></dt>
+        <dd>Start or end the selection at the playhead</dd>
+        <dt><kbd>Shift</kbd>+<kbd>[</kbd> <kbd>]</kbd></dt>
+        <dd>Go to the start or end of the selection</dd>
+        <dt><kbd class="mod">Ctrl</kbd>+<kbd>Enter</kbd></dt>
+        <dd>Convert</dd>
+        <dt><kbd class="mod">Ctrl</kbd>+<kbd>O</kbd></dt>
+        <dd>Open a video</dd>
+        <dt><kbd>?</kbd></dt>
+        <dd>Show these shortcuts</dd>
+      </dl>
+      <form method="dialog"><button class="btn ghost">Close</button></form>
+    </dialog>
   </body>
 </html>

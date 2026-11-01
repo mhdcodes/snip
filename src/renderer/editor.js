@@ -10,6 +10,7 @@ import { formatTime, parseTime } from "./format.js";
 const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
 const MIN_CUT = 0.05; // shortest selection, in seconds
+const CLICK_SLOP = 3; // pixels a press may move and still count as a click
 
 const $ = (id) => document.getElementById(id);
 
@@ -98,8 +99,10 @@ export function openEditor(video, modification, onChange) {
       paused = true;
     } else {
       paused = false;
+      // play from the playhead; rewind only when it is outside the selection or at its
+      // very end, where the last playback stopped
       const c = mod.cut;
-      if (cursor < c.start || cursor > c.start + c.duration - Math.min(1, c.duration / 2)) {
+      if (cursor < c.start || cursor > c.start + c.duration - frame) {
         setCursor(c.start);
       }
     }
@@ -154,17 +157,94 @@ export function openEditor(video, modification, onChange) {
     // keep the stamp inside the frame at both ends
     stamp.style.left = percent + "%";
     stamp.style.transform = `translateX(-${percent}%)`;
+    $("playhead").setAttribute("aria-valuetext", formatTime(cursor));
     showFallbackFrame();
   }
 
   $("play").onclick = togglePlay;
 
+  // the playhead knob: drag it to scrub, or step it with the arrow keys
+  const playhead = $("playhead");
+  playhead.onpointerdown = (event) => {
+    event.stopPropagation();
+    const start = cursor;
+    dragging = true;
+    syncPlayback();
+    playhead.classList.add("held");
+    playhead.setPointerCapture(event.pointerId); // keeps the grab cursor off the knob
+    drag(
+      event,
+      film,
+      ({ dx }) => setCursor(start + dx * duration),
+      () => {
+        dragging = false;
+        playhead.classList.remove("held");
+        syncPlayback();
+      },
+    );
+  };
+  playhead.onkeydown = (event) => {
+    const step = event.shiftKey ? 1 : frame;
+    const change = { ArrowLeft: -step, ArrowRight: step }[event.key];
+    if (change) {
+      event.preventDefault();
+      setCursor(cursor + change);
+    }
+  };
+
+  // The editor's keys, listed in the shortcuts dialog in index.html. They match
+  // event.key, so they follow the keyboard layout. Alt is allowed: some layouts need
+  // AltGr (Ctrl+Alt on Windows) or Option for [ and ].
   function onKey(event) {
     const tag = event.target.tagName;
-    if (event.key === " " && !["INPUT", "SELECT", "TEXTAREA", "BUTTON", "SUMMARY"].includes(tag)) {
-      event.preventDefault();
-      togglePlay();
+    if (
+      ["INPUT", "SELECT", "TEXTAREA"].includes(tag) ||
+      event.target.closest("dialog") ||
+      event.metaKey ||
+      (event.ctrlKey && !event.altKey)
+    ) {
+      return;
     }
+    const c = mod.cut;
+    const end = c.start + c.duration;
+    const near = (time) => Math.abs(cursor - time) < frame / 2;
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    const step = event.shiftKey ? 1 : frame;
+
+    const actions = {
+      " ": togglePlay,
+      k: togglePlay,
+      j: () => stepCursor(-step),
+      l: () => stepCursor(step),
+      // a second press goes on to the edge of the video
+      Home: () => setCursor(near(c.start) ? 0 : c.start),
+      End: () => setCursor(near(end) ? duration : end),
+      "{": () => setCursor(c.start),
+      "}": () => setCursor(end),
+      // past the other end, that end goes back to the edge of the video
+      "[": () => {
+        const start = Math.min(cursor, duration - MIN_CUT);
+        const stop = end - start >= MIN_CUT ? end : duration;
+        setSelection({ start, duration: stop - start }, true);
+      },
+      "]": () => {
+        const stop = Math.max(cursor, MIN_CUT);
+        const start = stop - c.start >= MIN_CUT ? c.start : 0;
+        setSelection({ start, duration: stop - start }, true);
+      },
+    };
+    const action = actions[key];
+    // Space on a button or summary clicks it instead
+    if (action && !(key === " " && ["BUTTON", "SUMMARY"].includes(tag))) {
+      event.preventDefault();
+      action();
+    }
+  }
+
+  // stepCursor moves the playhead by a frame or a second, pausing playback like a scrub.
+  function stepCursor(change) {
+    paused = true;
+    setCursor(cursor + change);
   }
   document.addEventListener("keydown", onKey);
 
@@ -214,21 +294,27 @@ export function openEditor(video, modification, onChange) {
 
   // dragTimeline edits the selection while dragging. update gets the pointer data and the
   // selection as it was when the drag started, and returns the new selection.
-  function dragTimeline(event, update) {
+  // A press that doesn't move is a click: it moves the playhead to clickTime instead.
+  function dragTimeline(event, update, clickTime = timeAt(event)) {
     const before = { ...mod.cut };
+    const width = film.getBoundingClientRect().width;
     let latest = before;
+    let moved = false;
     dragging = true;
     syncPlayback();
     drag(
       event,
       film,
       (pointer) => {
+        moved ||= Math.abs(pointer.dx * width) >= CLICK_SLOP;
+        if (!moved) return;
         latest = update(pointer, before);
         setSelection(latest, false);
       },
       () => {
         dragging = false;
-        setSelection(latest, true);
+        if (moved) setSelection(latest, true);
+        else setCursor(clickTime);
         syncPlayback();
       },
     );
@@ -237,12 +323,6 @@ export function openEditor(video, modification, onChange) {
   function timeAt(event) {
     const rect = film.getBoundingClientRect();
     return clamp(((event.clientX - rect.left) / rect.width) * duration, 0, duration);
-  }
-
-  function scrub(event) {
-    if (!dragging && !isPlaying() && event.pointerType === "mouse") {
-      setCursor(timeAt(event));
-    }
   }
 
   function drawCut() {
@@ -261,7 +341,6 @@ export function openEditor(video, modification, onChange) {
       gap.className = "gap";
       gap.style.left = pct(from);
       gap.style.width = pct(to - from);
-      gap.onpointermove = scrub;
       gap.onpointerdown = (event) =>
         dragTimeline(event, ({ x0, dx }, before) => {
           const start = x0 * duration;
@@ -278,11 +357,10 @@ export function openEditor(video, modification, onChange) {
     body.className = "cut";
     body.style.left = pct(cut.start);
     body.style.width = pct(cut.duration);
-    body.onpointermove = scrub;
     body.onpointerdown = (event) => {
       if (event.pointerType !== "mouse") {
-        // on touch screens dragging the body scrubs instead, moving it is too fiddly
-        const start = cursor;
+        // on touch screens the body scrubs from the finger instead, moving it is too fiddly
+        const start = timeAt(event);
         drag(
           event,
           film,
@@ -319,9 +397,12 @@ export function openEditor(video, modification, onChange) {
         setCursor(c.start + c.duration + d);
         return { start: c.start, duration: c.duration + d };
       };
-      handle.onpointerenter = () =>
-        !dragging && !isPlaying() && setCursor(side === "start" ? cut.start : cut.start + cut.duration);
-      handle.onpointerdown = (event) => dragTimeline(event, ({ dx }, before) => resize(before, dx * duration));
+      handle.onpointerdown = (event) =>
+        dragTimeline(
+          event,
+          ({ dx }, before) => resize(before, dx * duration),
+          side === "start" ? cut.start : cut.start + cut.duration,
+        );
       handle.onkeydown = (event) => {
         const step = event.shiftKey ? 1 : frame;
         const change = { ArrowLeft: -step, ArrowRight: step }[event.key];
@@ -366,7 +447,13 @@ export function openEditor(video, modification, onChange) {
         setSelection(changed, true);
         setCursor(changed.start);
       };
-      input.onkeydown = (event) => event.key === "Enter" && (event.preventDefault(), input.onchange());
+      // no return value: an onkeydown that returns false cancels the key, typing included
+      input.onkeydown = (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          input.onchange();
+        }
+      };
       wrap.append(input);
       row.append(wrap);
     };

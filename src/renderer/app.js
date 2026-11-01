@@ -11,6 +11,7 @@ let settings = null; // what the user picked: { modification, video, audio }
 let editor = null; // the open editing bench, see editor.js
 let currentPlan = null; // the main process's answer to settings, see api.plan
 let planTicket = 0; // only the newest plan request may update the page
+let planning = Promise.resolve(); // the newest plan request, settles when it is answered
 let job = null; // the running or finished conversion
 
 // ---------- screens ----------
@@ -127,7 +128,20 @@ function showConvert() {
   refreshPlan();
 }
 
-async function refreshPlan() {
+function refreshPlan() {
+  planning = requestPlan();
+}
+
+// planSettled waits for the newest plan, also one asked for while waiting.
+async function planSettled() {
+  let current;
+  do {
+    current = planning;
+    await current;
+  } while (current !== planning);
+}
+
+async function requestPlan() {
   const ticket = ++planTicket;
   $("convert-button").disabled = true;
   try {
@@ -415,6 +429,39 @@ document.addEventListener("click", (event) => {
 });
 
 $("open-button").onclick = () => openVideo(api.openVideo);
+
+// ---------- keyboard ----------
+
+// The app-wide keys; the editor handles its own, see editor.js. All are listed in the
+// shortcuts dialog. Mod is Cmd on a Mac and Ctrl elsewhere.
+const isMac = /Mac/.test(navigator.platform);
+for (const key of document.querySelectorAll("#keys .mod")) key.textContent = isMac ? "⌘" : "Ctrl";
+
+document.addEventListener("keydown", (event) => {
+  const mod = isMac ? event.metaKey : event.ctrlKey && !event.altKey;
+  const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName);
+  const keys = $("keys");
+  if (keys.open) return; // the dialog closes itself on Escape
+
+  if (mod && event.key.toLowerCase() === "o") {
+    event.preventDefault();
+    openVideo(api.openVideo);
+  } else if (mod && event.key === "Enter" && document.body.dataset.screen === "convert") {
+    event.preventDefault();
+    // commit a time being typed first, its change asks for a new plan
+    if (typing) event.target.blur();
+    planSettled().then(() => $("convert-button").click()); // does nothing while disabled
+  } else if (event.key === "?" && !typing && !event.metaKey && !event.ctrlKey) {
+    event.preventDefault();
+    keys.showModal();
+  }
+});
+
+// a click on the backdrop closes the dialog. No return value: an onclick that returns
+// false cancels the click, and with it the Close button.
+$("keys").onclick = (event) => {
+  if (event.target === $("keys")) $("keys").close();
+};
 
 // ---------- drop a file anywhere ----------
 
